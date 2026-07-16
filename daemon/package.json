@@ -2,12 +2,12 @@
   "name": "@fonagents/daemon",
   "version": "0.0.0",
   "description": "Daemon process that wires all adapters together and runs the orchestrator.",
-  "main": "./dist/index.js",
+  "main": "./dist/cli.js",
   "bin": {
     "fonagents": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && esbuild src/cli.ts --bundle --platform=node --outfile=dist/cli.js --format=cjs",
     "typecheck": "tsc --noEmit",
     "dev": "tsx src/cli.ts",
     "start": "node dist/cli.js"
@@ -22,6 +22,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
     "tsx": "^4.21.0",
     "typescript": "^5.5.0"
   }

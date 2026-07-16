@@ -14,23 +14,18 @@
     "beads-ui": "beads-ui/bin/beads-ui.js"
   },
   "files": [
-    "core/dist",
-    "adapters/beads/dist",
-    "adapters/anagent/dist",
-    "adapters/http-sse/dist",
-    "daemon/dist",
+    "daemon/dist/cli.js",
+    "adapters/http-sse/dist/mcp-server.js",
     "anagent/dist",
     "beads-ui/bin",
-    "beads-ui/dist",
-    "scripts"
+    "beads-ui/dist"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
     "dev": "npm run build && node daemon/dist/cli.js",
     "typecheck": "npm run typecheck --workspaces -if-present",
     "test": "npm run test --workspaces -if-present",
-    "prepare": "",
-    "postinstall": "node scripts/postinstall.js"
+    "prepare": ""
   },
   "license": "ISC"
 }
