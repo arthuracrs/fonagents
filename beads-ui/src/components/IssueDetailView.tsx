@@ -3,6 +3,7 @@ import { api } from "../api";
 import type { Status, IssueType, Comment } from "../types";
 import { IssueModel } from "../models/IssueModel";
 import { StatusBadge, TypeBadge, PriorityBadge } from "./Badge";
+import { TimeFormatter } from "../lib/TimeFormatter";
 
 interface Props {
   issue: IssueModel;
@@ -116,7 +117,7 @@ export function IssueDetailView({ issue: initialIssue, onUpdated }: Props) {
           <div className="mb-1 flex items-center gap-2 flex-wrap">
             <span className="font-mono text-xs text-[var(--text-muted)]">{issue.id}</span>
             <PriorityBadge priority={issue.priority} />
-            <TypeBadge type={issue.issue_type} />
+            <TypeBadge type={issue.type} />
             <StatusBadge status={issue.status} />
           </div>
           <h2 className="text-base font-semibold text-[var(--text)] leading-snug">{issue.title}</h2>
@@ -138,8 +139,8 @@ export function IssueDetailView({ issue: initialIssue, onUpdated }: Props) {
         <Field label="Type">
           <select
             className="bg-transparent text-[var(--text)] outline-none"
-            value={issue.issue_type}
-            onChange={(e) => updateField({ issue_type: e.target.value as IssueType })}
+            value={issue.type}
+            onChange={(e) => updateField({ type: e.target.value as IssueType })}
             disabled={actionLoading}
           >
             {types.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -264,9 +265,9 @@ export function IssueDetailView({ issue: initialIssue, onUpdated }: Props) {
               <div key={c.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface2)] p-3">
                 <div className="mb-1 flex items-center gap-2 text-xs text-[var(--text-muted)]">
                   {c.author && <span>@{c.author}</span>}
-                  <span>{new Date(c.created_at).toLocaleString()}</span>
+                  <span>{c.createdAt ? TimeFormatter.fmt(c.createdAt) : ""}</span>
                 </div>
-                <p className="whitespace-pre-wrap text-sm text-[var(--text)]">{c.text}</p>
+                <p className="whitespace-pre-wrap text-sm text-[var(--text)]">{c.body}</p>
               </div>
             ))}
           </div>

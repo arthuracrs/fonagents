@@ -131,7 +131,7 @@ function CreateIssueForm({ onCreated, onClose }: { onCreated: () => void; onClos
     setSaving(true);
     setError("");
     try {
-      await api.issues.create({ title, description, issue_type: type, priority, assignee } as Record<string, unknown> as any);
+      await api.issues.create({ title, description, type, priority, assignee } as Record<string, unknown> as any);
       onCreated();
     } catch (err: unknown) {
       setError((err as Error).message);

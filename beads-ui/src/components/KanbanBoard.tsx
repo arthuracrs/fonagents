@@ -23,7 +23,7 @@ function KanbanCard({ issue, onSelect }: { issue: IssueModel; onSelect: () => vo
     >
       <div className="mb-2 flex items-center gap-1.5 flex-wrap">
         <PriorityBadge priority={issue.priority} />
-        <TypeBadge type={issue.issue_type} />
+        <TypeBadge type={issue.type} />
       </div>
 
       <p className={`text-sm font-medium leading-snug ${issue.isClosed() ? "text-[var(--text-muted)] line-through" : "text-[var(--text)]"}`}>

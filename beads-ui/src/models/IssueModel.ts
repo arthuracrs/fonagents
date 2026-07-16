@@ -7,11 +7,12 @@ export class IssueModel implements Issue {
   description?: string;
   status!: Status;
   priority!: number;
-  issue_type!: IssueType;
+  type!: IssueType;
   assignee?: string;
   labels?: string[];
-  created_at!: string;
-  updated_at!: string;
+  createdAt!: string;
+  updatedAt!: string;
+  parentId?: string;
   closed_at?: string;
   close_reason?: string;
   due_at?: string;
@@ -34,9 +35,9 @@ export class IssueModel implements Issue {
   isDeferred(): boolean { return this.status === "deferred"; }
   isCritical(): boolean { return this.priority === 0; }
 
-  timeAgo(): string { return TimeFormatter.timeAgo(this.updated_at); }
-  createdFmt(): string { return TimeFormatter.fmt(this.created_at); }
-  updatedFmt(): string { return TimeFormatter.fmt(this.updated_at); }
+  timeAgo(): string { return TimeFormatter.timeAgo(this.updatedAt); }
+  createdFmt(): string { return TimeFormatter.fmt(this.createdAt); }
+  updatedFmt(): string { return TimeFormatter.fmt(this.updatedAt); }
   closedFmt(): string { return TimeFormatter.fmt(this.closed_at); }
 
   commentCount(): number { return this.comments?.length ?? 0; }

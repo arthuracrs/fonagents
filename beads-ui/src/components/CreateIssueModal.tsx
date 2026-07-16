@@ -27,7 +27,7 @@ export function CreateIssueModal({ onClose, onCreated }: Props) {
       const issue = await api.issues.create({
         title: title.trim(),
         description: description.trim() || undefined,
-        issue_type: type,
+        type,
         priority,
         assignee: assignee.trim() || undefined,
       } as Record<string, unknown> as any);

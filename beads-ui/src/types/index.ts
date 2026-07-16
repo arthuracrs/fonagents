@@ -8,11 +8,12 @@ export interface Issue {
   description?: string;
   status: Status;
   priority: number;
-  issue_type: IssueType;
+  type: IssueType;
   assignee?: string;
   labels?: string[];
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
+  parentId?: string;
   closed_at?: string;
   close_reason?: string;
   due_at?: string;
@@ -30,9 +31,10 @@ export interface Dependency {
 
 export interface Comment {
   id: string;
-  text: string;
+  issueId: string;
+  body: string;
   author?: string;
-  created_at: string;
+  createdAt: string;
 }
 
 export interface StatsSummary {

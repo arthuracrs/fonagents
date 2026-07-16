@@ -16,7 +16,7 @@ export function IssueRow({ issue, onClick }: Props) {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono text-xs text-[var(--text-muted)]">{issue.id}</span>
           <PriorityBadge priority={issue.priority} />
-          <TypeBadge type={issue.issue_type} />
+          <TypeBadge type={issue.type} />
           {issue.assignee && (
             <span className="text-xs text-[var(--text-muted)]">@{issue.assignee}</span>
           )}
