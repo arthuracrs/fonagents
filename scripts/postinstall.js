@@ -1,6 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 
+const root = path.resolve(__dirname, "..");
+
 function copyDir(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
@@ -19,8 +21,8 @@ const packages = [
 ];
 
 for (const pkg of packages) {
-  const src = path.join(__dirname, pkg.dir);
-  const dest = path.join(__dirname, "node_modules", pkg.name);
+  const src = path.join(root, pkg.dir);
+  const dest = path.join(root, "node_modules", pkg.name);
   if (!fs.existsSync(src)) continue;
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   copyDir(src, dest);
