@@ -1,6 +1,16 @@
 const fs = require("fs");
 const path = require("path");
 
+function copyDir(src, dest) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const s = path.join(src, entry.name);
+    const d = path.join(dest, entry.name);
+    if (entry.isDirectory()) copyDir(s, d);
+    else fs.copyFileSync(s, d);
+  }
+}
+
 const packages = [
   { name: "@fonagents/core", dir: "core" },
   { name: "@fonagents/beads-adapter", dir: "adapters/beads" },
@@ -13,9 +23,5 @@ for (const pkg of packages) {
   const dest = path.join(__dirname, "node_modules", pkg.name);
   if (!fs.existsSync(src)) continue;
   fs.mkdirSync(path.dirname(dest), { recursive: true });
-  try {
-    fs.symlinkSync(src, dest);
-  } catch {
-    // Already exists
-  }
+  copyDir(src, dest);
 }
