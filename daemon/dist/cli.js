@@ -25739,11 +25739,6 @@ var import_http_sse_adapter = __toESM(require_dist7());
 var import_express = __toESM(require_express2());
 var import_path = __toESM(require("path"));
 var import_fs = __toESM(require("fs"));
-function findPackageRoot() {
-  const scriptPath = import_fs.default.realpathSync(process.argv[1] || __filename);
-  const scriptDir = import_path.default.dirname(scriptPath);
-  return import_path.default.resolve(scriptDir, "../..");
-}
 var DEFAULT_MANAGER_PROMPT = [
   "You are the manager agent for a software project tracked by Beads (bd).",
   "The human operator talks only to you. You are responsible for:",
@@ -25771,7 +25766,7 @@ function startDaemon(opts = {}) {
   const eventBus = new import_http_sse_adapter.SseEventBus();
   const managerRuntime = opts.managerRuntimeId ?? process.env.MANAGER_RUNTIME ?? "opencode";
   const mcpFormat = managerRuntime === "claude-code" ? "claude-code" : "opencode";
-  const pkgRoot = findPackageRoot();
+  const pkgRoot = import_path.default.resolve(__dirname, "../..");
   const mcpServerScript = import_path.default.join(pkgRoot, "adapters/http-sse/dist/mcp-server.js");
   const mcpConfigPath = (0, import_http_sse_adapter.writeMcpConfig)({
     daemonUrl: `http://localhost:${port}`,

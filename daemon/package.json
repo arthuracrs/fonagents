@@ -6,6 +6,7 @@
   "bin": {
     "fonagents": "./dist/cli.js"
   },
+  "type": "commonjs",
   "scripts": {
     "build": "tsc && esbuild src/cli.ts --bundle --platform=node --outfile=dist/cli.js --format=cjs",
     "typecheck": "tsc --noEmit",

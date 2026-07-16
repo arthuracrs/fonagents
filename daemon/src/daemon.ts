@@ -8,16 +8,8 @@ import type { Express } from 'express'
 import path from 'path'
 import fs from 'fs'
 
-// Resolve the package root reliably. When bundled with esbuild and installed
-// globally via npm, process.argv[1] points to a symlink in the npm bin dir.
-// We resolve the symlink to get the real file location, then go up to the
-// package root.
-function findPackageRoot(): string {
-  const scriptPath = fs.realpathSync(process.argv[1] || __filename)
-  const scriptDir = path.dirname(scriptPath)
-  // daemon/dist/cli.js → package root is two levels up
-  return path.resolve(scriptDir, '../..')
-}
+// __dirname is injected by esbuild's banner so it points to the real file
+// location, regardless of npm's bin symlink. See daemon/package.json build script.
 
 // Default manager system prompt — teaches the manager about its tools and the
 // beads workflow. Can be overridden via MANAGER_SYSTEM_PROMPT env var or
@@ -67,7 +59,7 @@ export function startDaemon(opts: DaemonConfig = {}): void {
   // discovered from the cwd.
   const managerRuntime = opts.managerRuntimeId ?? process.env.MANAGER_RUNTIME ?? 'opencode'
   const mcpFormat: McpConfigFormat = managerRuntime === 'claude-code' ? 'claude-code' : 'opencode'
-  const pkgRoot = findPackageRoot()
+  const pkgRoot = path.resolve(__dirname, '../..')
   const mcpServerScript = path.join(pkgRoot, 'adapters/http-sse/dist/mcp-server.js')
   const mcpConfigPath = writeMcpConfig({
     daemonUrl: `http://localhost:${port}`,
