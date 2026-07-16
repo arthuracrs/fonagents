@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "fonagents": {
+      "type": "local",
+      "command": [
+        "node",
+        "/Users/arthurcalebe/Desktop/fon/fonagents/adapters/http-sse/dist/mcp-server.js",
+        "--daemon-url",
+        "http://localhost:4001"
+      ]
+    }
+  }
+}

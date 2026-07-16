@@ -1,0 +1,20 @@
+{
+  "name": "@fonagents/anagent-adapter",
+  "version": "0.0.0",
+  "description": "anagent adapter implementing AgentRuntimePort for @fonagents/core.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@fonagents/core": "^0.0.0"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  }
+}

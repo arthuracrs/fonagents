@@ -1,0 +1,23 @@
+{
+  "name": "anagent",
+  "version": "0.1.0",
+  "description": "Project-local AI agent runner",
+  "bin": {
+    "anagent": "./dist/cli.js"
+  },
+  "main": "./dist/runner.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --require ts-node/register --test tests/jsonl.test.ts tests/registry.test.ts",
+    "dev": "ts-node src/cli.ts",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0"
+  }
+}
