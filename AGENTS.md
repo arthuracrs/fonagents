@@ -29,6 +29,14 @@ git commit -m "..."
 git push
 ```
 
+## No symlinks
+
+Do not use symlinks anywhere in this project — not in postinstall, not in
+build scripts, not in dependency linking. Symlinks break on Windows, can dangle,
+and hide the real dependency structure. The `postinstall` script copies workspace
+`dist/` directories into `node_modules/` as real files instead. If you need to
+reference another workspace package, copy the files.
+
 ## anagent is external
 
 `anagent/` is a clone of the standalone repo (`arthuracrs/anagent`). It is pulled
