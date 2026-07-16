@@ -125,7 +125,12 @@ export function startDaemon(opts: DaemonConfig = {}): void {
   const beadsUiDist = path.join(pkgRoot, 'beads-ui/dist')
   if (fs.existsSync(beadsUiDist)) {
     app.use(express.static(beadsUiDist))
-    app.get('/*path', (_req, res) => {
+    // Only serve index.html for non-API routes (SPA fallback)
+    app.get('/*path', (req, res) => {
+      if (req.path.startsWith('/api/')) {
+        res.status(404).json({ error: 'Not found' })
+        return
+      }
       res.sendFile(path.join(beadsUiDist, 'index.html'))
     })
   }

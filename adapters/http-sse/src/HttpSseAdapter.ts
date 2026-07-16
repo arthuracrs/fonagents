@@ -1,5 +1,7 @@
 import express, { type Express, type Request, type Response } from 'express'
 import cors from 'cors'
+import fs from 'fs'
+import path from 'path'
 import type {
   IssueCreateInput,
   IssueFilter,
@@ -65,6 +67,23 @@ export function createHttpSseApp(
     req.on('close', () => eventBus.removeClient(res))
   })
 
+  // ── Init status (frontend checks this on startup) ───────────────────────────
+  app.get('/api/init-status', wrap(async (_req, res) => {
+    const bdPath = process.env.BD_PATH ?? 'bd'
+    const initialized = fs.existsSync(path.join(config.projectDir, '.beads'))
+    res.json({ initialized })
+  }))
+
+  app.post('/api/init', wrap(async (req, res) => {
+    const dir = (req.body as { dir?: string })?.dir ?? config.projectDir
+    const bdPath = process.env.BD_PATH ?? 'bd'
+    const { execFile } = require('child_process')
+    const { promisify } = require('util')
+    const execFileAsync = promisify(execFile)
+    const { stdout } = await execFileAsync(bdPath, ['init'], { cwd: dir })
+    res.json({ ok: true, output: stdout })
+  }))
+
   // ── Conversation ────────────────────────────────────────────────────────────
   app.post('/api/message', wrap(async (req, res) => {
     const { content } = req.body as { content: string }
@@ -106,6 +125,20 @@ export function createHttpSseApp(
     if (assignee) filter.assignee = assignee as string
     if (parent) filter.parent = parent as string
     res.json(await command.listIssues(filter))
+  }))
+
+  // ── Stats (must be before /:id to avoid matching "stats" as an issue ID) ────
+  app.get('/api/issues/stats', wrap(async (_req, res) => {
+    const issues = await command.listIssues()
+    const summary = {
+      total_issues: issues.length,
+      open_issues: issues.filter((i) => i.status === 'open').length,
+      in_progress_issues: issues.filter((i) => i.status === 'in_progress').length,
+      blocked_issues: issues.filter((i) => i.status === 'blocked').length,
+      closed_issues: issues.filter((i) => i.status === 'closed').length,
+      deferred_issues: issues.filter((i) => i.status === 'deferred').length,
+    }
+    res.json({ summary })
   }))
 
   app.get('/api/issues/:id', wrap(async (req, res) => {
@@ -183,6 +216,49 @@ export function createHttpSseApp(
 
   app.get('/api/gates', wrap(async (_req, res) => {
     res.json(await command.listGates())
+  }))
+
+  // ── Graph (frontend dependency view) ─────────────────────────────────────────
+  app.get('/api/graph', wrap(async (_req, res) => {
+    const issues = await command.listIssues()
+    res.json({ issues })
+  }))
+
+  // ── Legacy execution endpoints (frontend AgentsPanel) ────────────────────────
+  // These bridge the old beads-ui components to the new architecture.
+  app.get('/api/executions/issue/:issueId', wrap(async (req, res) => {
+    res.json([])
+  }))
+
+  app.post('/api/executions', wrap(async (req, res) => {
+    const { issueId, runtimeId, prompt, mode } = req.body as {
+      issueId: string; runtimeId: string; prompt: string; mode?: string
+    }
+    // Dispatch via the manager tools (same as dispatchWorker)
+    const result = await managerTools.dispatchWorker({ issueId, runtimeId, prompt })
+    res.json({ id: result.workerId, issueId, status: 'running', startedAt: new Date().toISOString() })
+  }))
+
+  app.delete('/api/executions/:id', wrap(async (req, res) => {
+    await command.cancelWorker(param(req, 'id'))
+    res.json({ ok: true })
+  }))
+
+  // ── Legacy trigger endpoints (frontend AgentsPanel) ──────────────────────────
+  app.get('/api/triggers/issue/:issueId', wrap(async (_req, res) => {
+    res.json([])
+  }))
+
+  app.post('/api/triggers', wrap(async (_req, res) => {
+    res.json({ id: Date.now().toString(), enabled: true, createdAt: new Date().toISOString() })
+  }))
+
+  app.patch('/api/triggers/:id', wrap(async (_req, res) => {
+    res.json({ ok: true })
+  }))
+
+  app.delete('/api/triggers/:id', wrap(async (_req, res) => {
+    res.json({ ok: true })
   }))
 
   // ── Workers & runtimes ──────────────────────────────────────────────────────

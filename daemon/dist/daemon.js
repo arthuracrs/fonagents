@@ -108,7 +108,12 @@ function startDaemon(opts = {}) {
     const beadsUiDist = path_1.default.join(pkgRoot, 'beads-ui/dist');
     if (fs_1.default.existsSync(beadsUiDist)) {
         app.use(express_1.default.static(beadsUiDist));
-        app.get('/*path', (_req, res) => {
+        // Only serve index.html for non-API routes (SPA fallback)
+        app.get('/*path', (req, res) => {
+            if (req.path.startsWith('/api/')) {
+                res.status(404).json({ error: 'Not found' });
+                return;
+            }
             res.sendFile(path_1.default.join(beadsUiDist, 'index.html'));
         });
     }

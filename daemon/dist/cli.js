@@ -25440,6 +25440,8 @@ var require_HttpSseAdapter = __commonJS({
     exports2.createHttpSseApp = createHttpSseApp2;
     var express_1 = __importDefault(require_express2());
     var cors_1 = __importDefault(require_lib3());
+    var fs_1 = __importDefault(require("fs"));
+    var path_1 = __importDefault(require("path"));
     function createHttpSseApp2(command, managerTools, eventBus, config) {
       const app = (0, express_1.default)();
       app.use((0, cors_1.default)());
@@ -25467,6 +25469,20 @@ var require_HttpSseAdapter = __commonJS({
         eventBus.addClient(res);
         req.on("close", () => eventBus.removeClient(res));
       });
+      app.get("/api/init-status", wrap(async (_req, res) => {
+        const bdPath = process.env.BD_PATH ?? "bd";
+        const initialized = fs_1.default.existsSync(path_1.default.join(config.projectDir, ".beads"));
+        res.json({ initialized });
+      }));
+      app.post("/api/init", wrap(async (req, res) => {
+        const dir = req.body?.dir ?? config.projectDir;
+        const bdPath = process.env.BD_PATH ?? "bd";
+        const { execFile } = require("child_process");
+        const { promisify } = require("util");
+        const execFileAsync = promisify(execFile);
+        const { stdout } = await execFileAsync(bdPath, ["init"], { cwd: dir });
+        res.json({ ok: true, output: stdout });
+      }));
       app.post("/api/message", wrap(async (req, res) => {
         const { content } = req.body;
         if (!content) {
@@ -25506,6 +25522,18 @@ var require_HttpSseAdapter = __commonJS({
         if (parent)
           filter.parent = parent;
         res.json(await command.listIssues(filter));
+      }));
+      app.get("/api/issues/stats", wrap(async (_req, res) => {
+        const issues = await command.listIssues();
+        const summary = {
+          total_issues: issues.length,
+          open_issues: issues.filter((i) => i.status === "open").length,
+          in_progress_issues: issues.filter((i) => i.status === "in_progress").length,
+          blocked_issues: issues.filter((i) => i.status === "blocked").length,
+          closed_issues: issues.filter((i) => i.status === "closed").length,
+          deferred_issues: issues.filter((i) => i.status === "deferred").length
+        };
+        res.json({ summary });
       }));
       app.get("/api/issues/:id", wrap(async (req, res) => {
         const issue = await command.getIssue(param(req, "id"));
@@ -25573,6 +25601,34 @@ var require_HttpSseAdapter = __commonJS({
       }));
       app.get("/api/gates", wrap(async (_req, res) => {
         res.json(await command.listGates());
+      }));
+      app.get("/api/graph", wrap(async (_req, res) => {
+        const issues = await command.listIssues();
+        res.json({ issues });
+      }));
+      app.get("/api/executions/issue/:issueId", wrap(async (req, res) => {
+        res.json([]);
+      }));
+      app.post("/api/executions", wrap(async (req, res) => {
+        const { issueId, runtimeId, prompt, mode } = req.body;
+        const result = await managerTools.dispatchWorker({ issueId, runtimeId, prompt });
+        res.json({ id: result.workerId, issueId, status: "running", startedAt: (/* @__PURE__ */ new Date()).toISOString() });
+      }));
+      app.delete("/api/executions/:id", wrap(async (req, res) => {
+        await command.cancelWorker(param(req, "id"));
+        res.json({ ok: true });
+      }));
+      app.get("/api/triggers/issue/:issueId", wrap(async (_req, res) => {
+        res.json([]);
+      }));
+      app.post("/api/triggers", wrap(async (_req, res) => {
+        res.json({ id: Date.now().toString(), enabled: true, createdAt: (/* @__PURE__ */ new Date()).toISOString() });
+      }));
+      app.patch("/api/triggers/:id", wrap(async (_req, res) => {
+        res.json({ ok: true });
+      }));
+      app.delete("/api/triggers/:id", wrap(async (_req, res) => {
+        res.json({ ok: true });
       }));
       app.get("/api/workers/:id", wrap(async (req, res) => {
         const worker = await command.getWorkerStatus(param(req, "id"));
@@ -25812,7 +25868,11 @@ function startDaemon(opts = {}) {
   const beadsUiDist = import_path.default.join(pkgRoot, "beads-ui/dist");
   if (import_fs.default.existsSync(beadsUiDist)) {
     app.use(import_express.default.static(beadsUiDist));
-    app.get("/*path", (_req, res) => {
+    app.get("/*path", (req, res) => {
+      if (req.path.startsWith("/api/")) {
+        res.status(404).json({ error: "Not found" });
+        return;
+      }
       res.sendFile(import_path.default.join(beadsUiDist, "index.html"));
     });
   }
