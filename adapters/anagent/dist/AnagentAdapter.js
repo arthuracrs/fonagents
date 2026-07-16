@@ -291,11 +291,10 @@ exports.AnagentAdapter = AnagentAdapter;
 function resolveAnagent(override) {
     if (override)
         return { bin: override, prefixArgs: [] };
-    // 1. Local dev — adjacent monorepo repo
-    const localDist = path_1.default.join(__dirname, '../../../anagent/dist/cli.js');
-    if (fs_1.default.existsSync(localDist))
-        return { bin: 'node', prefixArgs: [localDist] };
-    // 2. PATH
+    // 1. Check ANAGENT_PATH env
+    if (process.env.ANAGENT_PATH)
+        return { bin: process.env.ANAGENT_PATH, prefixArgs: [] };
+    // 2. Check if anagent is on PATH
     const PATH = process.env.PATH || '';
     for (const dir of PATH.split(':')) {
         const candidate = path_1.default.join(dir, 'anagent');

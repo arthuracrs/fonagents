@@ -11,6 +11,16 @@ const http_sse_adapter_1 = require("@fonagents/http-sse-adapter");
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+// Resolve the package root reliably. When bundled with esbuild and installed
+// globally via npm, process.argv[1] points to a symlink in the npm bin dir.
+// We resolve the symlink to get the real file location, then go up to the
+// package root.
+function findPackageRoot() {
+    const scriptPath = fs_1.default.realpathSync(process.argv[1] || __filename);
+    const scriptDir = path_1.default.dirname(scriptPath);
+    // daemon/dist/cli.js → package root is two levels up
+    return path_1.default.resolve(scriptDir, '../..');
+}
 // Default manager system prompt — teaches the manager about its tools and the
 // beads workflow. Can be overridden via MANAGER_SYSTEM_PROMPT env var or
 // MANAGER_PROMPT_FILE path.
@@ -46,7 +56,8 @@ function startDaemon(opts = {}) {
     // discovered from the cwd.
     const managerRuntime = opts.managerRuntimeId ?? process.env.MANAGER_RUNTIME ?? 'opencode';
     const mcpFormat = managerRuntime === 'claude-code' ? 'claude-code' : 'opencode';
-    const mcpServerScript = path_1.default.resolve(__dirname, '../../adapters/http-sse/dist/mcp-server.js');
+    const pkgRoot = findPackageRoot();
+    const mcpServerScript = path_1.default.join(pkgRoot, 'adapters/http-sse/dist/mcp-server.js');
     const mcpConfigPath = (0, http_sse_adapter_1.writeMcpConfig)({
         daemonUrl: `http://localhost:${port}`,
         mcpServerScript,
@@ -102,7 +113,7 @@ function startDaemon(opts = {}) {
     // ── 6. Create the Express app (wire routes to the orchestrator) ──────────────
     const { app } = (0, http_sse_adapter_1.createHttpSseApp)(orchestrator, orchestrator, eventBus, { port, projectDir });
     // ── 7. Serve the web UI if beads-ui's dist exists ────────────────────────────
-    const beadsUiDist = path_1.default.resolve(__dirname, '../../beads-ui/dist');
+    const beadsUiDist = path_1.default.join(pkgRoot, 'beads-ui/dist');
     if (fs_1.default.existsSync(beadsUiDist)) {
         app.use(express_1.default.static(beadsUiDist));
         app.get('/*path', (_req, res) => {

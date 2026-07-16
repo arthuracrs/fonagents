@@ -331,11 +331,10 @@ export class AnagentAdapter implements AgentRuntimePort {
 function resolveAnagent(override?: string): { bin: string; prefixArgs: string[] } {
   if (override) return { bin: override, prefixArgs: [] }
 
-  // 1. Local dev — adjacent monorepo repo
-  const localDist = path.join(__dirname, '../../../anagent/dist/cli.js')
-  if (fs.existsSync(localDist)) return { bin: 'node', prefixArgs: [localDist] }
+  // 1. Check ANAGENT_PATH env
+  if (process.env.ANAGENT_PATH) return { bin: process.env.ANAGENT_PATH, prefixArgs: [] }
 
-  // 2. PATH
+  // 2. Check if anagent is on PATH
   const PATH = process.env.PATH || ''
   for (const dir of PATH.split(':')) {
     const candidate = path.join(dir, 'anagent')

@@ -8,6 +8,17 @@ import type { Express } from 'express'
 import path from 'path'
 import fs from 'fs'
 
+// Resolve the package root reliably. When bundled with esbuild and installed
+// globally via npm, process.argv[1] points to a symlink in the npm bin dir.
+// We resolve the symlink to get the real file location, then go up to the
+// package root.
+function findPackageRoot(): string {
+  const scriptPath = fs.realpathSync(process.argv[1] || __filename)
+  const scriptDir = path.dirname(scriptPath)
+  // daemon/dist/cli.js → package root is two levels up
+  return path.resolve(scriptDir, '../..')
+}
+
 // Default manager system prompt — teaches the manager about its tools and the
 // beads workflow. Can be overridden via MANAGER_SYSTEM_PROMPT env var or
 // MANAGER_PROMPT_FILE path.
@@ -56,7 +67,8 @@ export function startDaemon(opts: DaemonConfig = {}): void {
   // discovered from the cwd.
   const managerRuntime = opts.managerRuntimeId ?? process.env.MANAGER_RUNTIME ?? 'opencode'
   const mcpFormat: McpConfigFormat = managerRuntime === 'claude-code' ? 'claude-code' : 'opencode'
-  const mcpServerScript = path.resolve(__dirname, '../../adapters/http-sse/dist/mcp-server.js')
+  const pkgRoot = findPackageRoot()
+  const mcpServerScript = path.join(pkgRoot, 'adapters/http-sse/dist/mcp-server.js')
   const mcpConfigPath = writeMcpConfig({
     daemonUrl: `http://localhost:${port}`,
     mcpServerScript,
@@ -118,7 +130,7 @@ export function startDaemon(opts: DaemonConfig = {}): void {
   const { app } = createHttpSseApp(orchestrator, orchestrator, eventBus, { port, projectDir })
 
   // ── 7. Serve the web UI if beads-ui's dist exists ────────────────────────────
-  const beadsUiDist = path.resolve(__dirname, '../../beads-ui/dist')
+  const beadsUiDist = path.join(pkgRoot, 'beads-ui/dist')
   if (fs.existsSync(beadsUiDist)) {
     app.use(express.static(beadsUiDist))
     app.get('/*path', (_req, res) => {

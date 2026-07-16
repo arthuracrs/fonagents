@@ -1197,9 +1197,8 @@ var require_AnagentAdapter = __commonJS({
     function resolveAnagent(override) {
       if (override)
         return { bin: override, prefixArgs: [] };
-      const localDist = path_1.default.join(__dirname, "../../../anagent/dist/cli.js");
-      if (fs_1.default.existsSync(localDist))
-        return { bin: "node", prefixArgs: [localDist] };
+      if (process.env.ANAGENT_PATH)
+        return { bin: process.env.ANAGENT_PATH, prefixArgs: [] };
       const PATH = process.env.PATH || "";
       for (const dir of PATH.split(":")) {
         const candidate = path_1.default.join(dir, "anagent");
@@ -25740,6 +25739,11 @@ var import_http_sse_adapter = __toESM(require_dist7());
 var import_express = __toESM(require_express2());
 var import_path = __toESM(require("path"));
 var import_fs = __toESM(require("fs"));
+function findPackageRoot() {
+  const scriptPath = import_fs.default.realpathSync(process.argv[1] || __filename);
+  const scriptDir = import_path.default.dirname(scriptPath);
+  return import_path.default.resolve(scriptDir, "../..");
+}
 var DEFAULT_MANAGER_PROMPT = [
   "You are the manager agent for a software project tracked by Beads (bd).",
   "The human operator talks only to you. You are responsible for:",
@@ -25767,7 +25771,8 @@ function startDaemon(opts = {}) {
   const eventBus = new import_http_sse_adapter.SseEventBus();
   const managerRuntime = opts.managerRuntimeId ?? process.env.MANAGER_RUNTIME ?? "opencode";
   const mcpFormat = managerRuntime === "claude-code" ? "claude-code" : "opencode";
-  const mcpServerScript = import_path.default.resolve(__dirname, "../../adapters/http-sse/dist/mcp-server.js");
+  const pkgRoot = findPackageRoot();
+  const mcpServerScript = import_path.default.join(pkgRoot, "adapters/http-sse/dist/mcp-server.js");
   const mcpConfigPath = (0, import_http_sse_adapter.writeMcpConfig)({
     daemonUrl: `http://localhost:${port}`,
     mcpServerScript,
@@ -25809,7 +25814,7 @@ function startDaemon(opts = {}) {
   };
   const orchestrator = new import_core.Orchestrator(tracker, runtime, eventBus, orchestratorConfig);
   const { app } = (0, import_http_sse_adapter.createHttpSseApp)(orchestrator, orchestrator, eventBus, { port, projectDir });
-  const beadsUiDist = import_path.default.resolve(__dirname, "../../beads-ui/dist");
+  const beadsUiDist = import_path.default.join(pkgRoot, "beads-ui/dist");
   if (import_fs.default.existsSync(beadsUiDist)) {
     app.use(import_express.default.static(beadsUiDist));
     app.get("/*path", (_req, res) => {
