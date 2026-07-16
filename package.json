@@ -21,14 +21,16 @@
     "daemon/dist",
     "anagent/dist",
     "beads-ui/bin",
-    "beads-ui/dist"
+    "beads-ui/dist",
+    "scripts"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
     "dev": "npm run build && node daemon/dist/cli.js",
     "typecheck": "npm run typecheck --workspaces -if-present",
     "test": "npm run test --workspaces -if-present",
-    "prepare": ""
+    "prepare": "",
+    "postinstall": "node scripts/postinstall.js"
   },
   "license": "ISC"
 }
