@@ -157,35 +157,19 @@ var require_Orchestrator = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Orchestrator = void 0;
-    var DEFAULT_MANAGER_FORMULA = "manager-swarm";
     var DEFAULT_MANAGER_RUNTIME = "opencode";
     var Orchestrator = class {
       tracker;
       runtime;
       events;
       config;
-      managerSessionId;
       currentMoleculeId;
-      messages = [];
       workerSubscriptions = /* @__PURE__ */ new Map();
       constructor(tracker, runtime, events, config) {
         this.tracker = tracker;
         this.runtime = runtime;
         this.events = events;
         this.config = config;
-      }
-      // ── UiCommandPort: conversation ───────────────────────────────────────────────
-      async sendUserMessage(content) {
-        const userMsg = this.makeMessage("user", content);
-        const managerMsg = this.makeMessage("manager", "");
-        this.messages.push(userMsg, managerMsg);
-        this.emit({ type: "user_message", message: userMsg });
-        this.emit({ type: "manager_thinking", active: true });
-        void this.runManagerTurn(content, managerMsg).catch((err) => {
-          this.emit({ type: "error", message: `Manager turn failed: ${err.message}` });
-          this.emit({ type: "manager_thinking", active: false });
-        });
-        return { userMessageId: userMsg.id, managerMessageId: managerMsg.id };
       }
       // ── UiCommandPort: gates ───────────────────────────────────────────────────────
       async resolveGate(gateId, note) {
@@ -219,9 +203,6 @@ var require_Orchestrator = __commonJS({
       }
       getWorkerStatus(workerId) {
         return Promise.resolve(this.runtime.getWorker(workerId));
-      }
-      listMessages() {
-        return Promise.resolve([...this.messages]);
       }
       listRuntimes() {
         return this.runtime.listRuntimes();
@@ -259,28 +240,6 @@ var require_Orchestrator = __commonJS({
       }
       addDependency(childId, parentId, type) {
         return this.tracker.addDependency(childId, parentId, type);
-      }
-      // ── UiCommandPort: manager lifecycle ──────────────────────────────────────────
-      async startManager() {
-        if (this.managerSessionId)
-          return { sessionId: this.managerSessionId };
-        const { sessionId } = await this.runtime.startManager({
-          runtimeId: this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
-          systemPrompt: this.config.managerSystemPrompt,
-          bootstrapMessage: this.bootstrapMessage(),
-          mcpConfigPath: this.config.mcpConfigPath,
-          cwd: this.config.projectDir
-        });
-        this.managerSessionId = sessionId;
-        this.emit({ type: "manager_started", sessionId });
-        return { sessionId };
-      }
-      async endManager() {
-        if (!this.managerSessionId)
-          return;
-        await this.runtime.endManager(this.managerSessionId);
-        this.emit({ type: "manager_ended", sessionId: this.managerSessionId });
-        this.managerSessionId = void 0;
       }
       // ── ManagerToolsPort: tools the manager LLM calls via MCP ──────────────────────
       async decompose(input) {
@@ -354,31 +313,6 @@ ${issue.description}`,
         await this.tracker.closeIssue(input.issueId, input.reason);
         this.emit({ type: "issue_changed", issueId: input.issueId, change: "closed" });
       }
-      // ── The manager conversation loop ──────────────────────────────────────────────
-      // Sends the user's message to the manager session. The manager streams its
-      // reply (text deltas + tool calls). Tool calls arrive via MCP and route back
-      // into the ManagerToolsPort methods above. When the turn ends, we finalize the
-      // manager message bubble.
-      async runManagerTurn(userContent, managerMsg) {
-        if (!this.managerSessionId)
-          await this.startManager();
-        let buffer = "";
-        const events = await this.runtime.sendManagerTurn({
-          sessionId: this.managerSessionId,
-          message: userContent,
-          onEvent: (ev) => {
-            const delta = managerStreamDelta(ev);
-            if (delta) {
-              buffer += delta;
-              managerMsg.content = buffer;
-              this.emit({ type: "manager_stream", delta });
-            }
-          }
-        });
-        managerMsg.content = buffer || summarizeTurn(events);
-        this.emit({ type: "manager_message", message: managerMsg });
-        this.emit({ type: "manager_thinking", active: false });
-      }
       // ── Helpers ────────────────────────────────────────────────────────────────────
       forwardWorkerEvent(workerId, ev) {
         if (ev.type === "text")
@@ -395,39 +329,11 @@ ${issue.description}`,
         const mol = molecules.find((m) => m.id === this.currentMoleculeId);
         return mol?.rootIssueId;
       }
-      bootstrapMessage() {
-        return [
-          "You are the manager agent. The human operator talks only to you.",
-          "You decompose work into a swarm molecule, dispatch worker agents onto the child issues, monitor them, and escalate to the human (via the escalate tool) when you need a decision.",
-          `Use the ${this.config.managerFormula ?? DEFAULT_MANAGER_FORMULA} formula to decompose.`,
-          "Call tools rather than shelling out: the system records everything and surfaces it to the human in real time."
-        ].join("\n");
-      }
-      makeMessage(role, content) {
-        return {
-          id: genId(),
-          role,
-          content,
-          createdAt: (/* @__PURE__ */ new Date()).toISOString()
-        };
-      }
       emit(event) {
         this.events.emit(event);
       }
     };
     exports2.Orchestrator = Orchestrator;
-    function managerStreamDelta(ev) {
-      if (ev.type === "text")
-        return ev.delta;
-      return "";
-    }
-    function summarizeTurn(events) {
-      const text = events.filter((e) => e.type === "text").map((e) => e.delta).join("");
-      return text || "(turn complete)";
-    }
-    function genId() {
-      return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    }
   }
 });
 

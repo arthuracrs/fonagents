@@ -157,35 +157,19 @@ var require_Orchestrator = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Orchestrator = void 0;
-    var DEFAULT_MANAGER_FORMULA = "manager-swarm";
     var DEFAULT_MANAGER_RUNTIME = "opencode";
     var Orchestrator2 = class {
       tracker;
       runtime;
       events;
       config;
-      managerSessionId;
       currentMoleculeId;
-      messages = [];
       workerSubscriptions = /* @__PURE__ */ new Map();
       constructor(tracker, runtime, events, config) {
         this.tracker = tracker;
         this.runtime = runtime;
         this.events = events;
         this.config = config;
-      }
-      // ── UiCommandPort: conversation ───────────────────────────────────────────────
-      async sendUserMessage(content) {
-        const userMsg = this.makeMessage("user", content);
-        const managerMsg = this.makeMessage("manager", "");
-        this.messages.push(userMsg, managerMsg);
-        this.emit({ type: "user_message", message: userMsg });
-        this.emit({ type: "manager_thinking", active: true });
-        void this.runManagerTurn(content, managerMsg).catch((err) => {
-          this.emit({ type: "error", message: `Manager turn failed: ${err.message}` });
-          this.emit({ type: "manager_thinking", active: false });
-        });
-        return { userMessageId: userMsg.id, managerMessageId: managerMsg.id };
       }
       // ── UiCommandPort: gates ───────────────────────────────────────────────────────
       async resolveGate(gateId, note) {
@@ -219,9 +203,6 @@ var require_Orchestrator = __commonJS({
       }
       getWorkerStatus(workerId) {
         return Promise.resolve(this.runtime.getWorker(workerId));
-      }
-      listMessages() {
-        return Promise.resolve([...this.messages]);
       }
       listRuntimes() {
         return this.runtime.listRuntimes();
@@ -259,28 +240,6 @@ var require_Orchestrator = __commonJS({
       }
       addDependency(childId, parentId, type) {
         return this.tracker.addDependency(childId, parentId, type);
-      }
-      // ── UiCommandPort: manager lifecycle ──────────────────────────────────────────
-      async startManager() {
-        if (this.managerSessionId)
-          return { sessionId: this.managerSessionId };
-        const { sessionId } = await this.runtime.startManager({
-          runtimeId: this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
-          systemPrompt: this.config.managerSystemPrompt,
-          bootstrapMessage: this.bootstrapMessage(),
-          mcpConfigPath: this.config.mcpConfigPath,
-          cwd: this.config.projectDir
-        });
-        this.managerSessionId = sessionId;
-        this.emit({ type: "manager_started", sessionId });
-        return { sessionId };
-      }
-      async endManager() {
-        if (!this.managerSessionId)
-          return;
-        await this.runtime.endManager(this.managerSessionId);
-        this.emit({ type: "manager_ended", sessionId: this.managerSessionId });
-        this.managerSessionId = void 0;
       }
       // ── ManagerToolsPort: tools the manager LLM calls via MCP ──────────────────────
       async decompose(input) {
@@ -354,31 +313,6 @@ ${issue.description}`,
         await this.tracker.closeIssue(input.issueId, input.reason);
         this.emit({ type: "issue_changed", issueId: input.issueId, change: "closed" });
       }
-      // ── The manager conversation loop ──────────────────────────────────────────────
-      // Sends the user's message to the manager session. The manager streams its
-      // reply (text deltas + tool calls). Tool calls arrive via MCP and route back
-      // into the ManagerToolsPort methods above. When the turn ends, we finalize the
-      // manager message bubble.
-      async runManagerTurn(userContent, managerMsg) {
-        if (!this.managerSessionId)
-          await this.startManager();
-        let buffer = "";
-        const events = await this.runtime.sendManagerTurn({
-          sessionId: this.managerSessionId,
-          message: userContent,
-          onEvent: (ev) => {
-            const delta = managerStreamDelta(ev);
-            if (delta) {
-              buffer += delta;
-              managerMsg.content = buffer;
-              this.emit({ type: "manager_stream", delta });
-            }
-          }
-        });
-        managerMsg.content = buffer || summarizeTurn(events);
-        this.emit({ type: "manager_message", message: managerMsg });
-        this.emit({ type: "manager_thinking", active: false });
-      }
       // ── Helpers ────────────────────────────────────────────────────────────────────
       forwardWorkerEvent(workerId, ev) {
         if (ev.type === "text")
@@ -395,39 +329,11 @@ ${issue.description}`,
         const mol = molecules.find((m) => m.id === this.currentMoleculeId);
         return mol?.rootIssueId;
       }
-      bootstrapMessage() {
-        return [
-          "You are the manager agent. The human operator talks only to you.",
-          "You decompose work into a swarm molecule, dispatch worker agents onto the child issues, monitor them, and escalate to the human (via the escalate tool) when you need a decision.",
-          `Use the ${this.config.managerFormula ?? DEFAULT_MANAGER_FORMULA} formula to decompose.`,
-          "Call tools rather than shelling out: the system records everything and surfaces it to the human in real time."
-        ].join("\n");
-      }
-      makeMessage(role, content) {
-        return {
-          id: genId(),
-          role,
-          content,
-          createdAt: (/* @__PURE__ */ new Date()).toISOString()
-        };
-      }
       emit(event) {
         this.events.emit(event);
       }
     };
     exports2.Orchestrator = Orchestrator2;
-    function managerStreamDelta(ev) {
-      if (ev.type === "text")
-        return ev.delta;
-      return "";
-    }
-    function summarizeTurn(events) {
-      const text = events.filter((e) => e.type === "text").map((e) => e.delta).join("");
-      return text || "(turn complete)";
-    }
-    function genId() {
-      return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    }
   }
 });
 
@@ -918,7 +824,6 @@ var require_AnagentAdapter = __commonJS({
     var AnagentAdapter2 = class {
       workers = /* @__PURE__ */ new Map();
       listeners = /* @__PURE__ */ new Map();
-      managerSessions = /* @__PURE__ */ new Map();
       bin;
       binArgs;
       cwd;
@@ -1044,70 +949,6 @@ var require_AnagentAdapter = __commonJS({
       getWorkersForIssue(issueId) {
         return Array.from(this.workers.values()).filter((w) => w.issueId === issueId).map((w) => ({ ...w }));
       }
-      // ── Manager (persistent session via --resume) ────────────────────────────────
-      async startManager(input) {
-        const args = [
-          ...this.binArgs,
-          "run",
-          input.bootstrapMessage,
-          "--stream",
-          "--runtime",
-          input.runtimeId,
-          "--mode",
-          "headless",
-          "--system-prompt",
-          input.systemPrompt,
-          "--cwd",
-          input.cwd ?? this.cwd
-        ];
-        if (input.mcpConfigPath)
-          args.push("--mcp-config", input.mcpConfigPath);
-        const events = await this.runStreamingSession(args, input.onEvent);
-        const sessionEvent = events.find((e) => e.type === "session");
-        if (!sessionEvent || sessionEvent.type !== "session") {
-          throw new Error("Manager bootstrap did not emit a session event \u2014 cannot resume.");
-        }
-        const sessionId = sessionEvent.sessionId;
-        this.managerSessions.set(sessionId, {
-          sessionId,
-          startedAt: (/* @__PURE__ */ new Date()).toISOString(),
-          status: "active",
-          runtimeId: input.runtimeId,
-          mcpConfigPath: input.mcpConfigPath
-        });
-        return { sessionId, events };
-      }
-      async sendManagerTurn(input) {
-        const session = this.managerSessions.get(input.sessionId);
-        if (!session)
-          throw new Error(`No manager session found for id ${input.sessionId}`);
-        const args = [
-          ...this.binArgs,
-          "run",
-          input.message,
-          "--stream",
-          "--resume",
-          input.sessionId,
-          "--cwd",
-          this.cwd
-        ];
-        if (session.runtimeId)
-          args.push("--runtime", session.runtimeId);
-        if (session.mcpConfigPath)
-          args.push("--mcp-config", session.mcpConfigPath);
-        const events = await this.runStreamingSession(args, input.onEvent);
-        return events;
-      }
-      async endManager(sessionId) {
-        const session = this.managerSessions.get(sessionId);
-        if (session) {
-          session.status = "ended";
-          this.managerSessions.delete(sessionId);
-        }
-      }
-      getManagerSession(sessionId) {
-        return this.managerSessions.get(sessionId);
-      }
       // ── Internals ────────────────────────────────────────────────────────────────
       pipeEvents(workerId, proc) {
         let buf = "";
@@ -1136,61 +977,6 @@ var require_AnagentAdapter = __commonJS({
           return;
         for (const cb of subs)
           cb(event);
-      }
-      runStreamingSession(args, onEvent) {
-        return new Promise((resolve, reject) => {
-          const proc = (0, child_process_1.spawn)(this.bin, args, {
-            stdio: ["ignore", "pipe", "pipe"],
-            cwd: this.cwd
-          });
-          const events = [];
-          let buf = "";
-          let stderr = "";
-          proc.stdout?.on("data", (data) => {
-            buf += data.toString();
-            const lines = buf.split("\n");
-            buf = lines.pop() ?? "";
-            for (const line of lines) {
-              const raw = (0, protocol_js_1.parseNdjsonLine)(line);
-              if (!raw)
-                continue;
-              const translated = (0, protocol_js_1.translateEvent)(raw);
-              if (translated) {
-                events.push(translated);
-                onEvent?.(translated);
-              }
-            }
-          });
-          proc.stderr?.on("data", (data) => {
-            stderr += data.toString();
-          });
-          proc.on("close", (code) => {
-            if (buf.trim()) {
-              const raw = (0, protocol_js_1.parseNdjsonLine)(buf);
-              if (raw) {
-                const translated = (0, protocol_js_1.translateEvent)(raw);
-                if (translated) {
-                  events.push(translated);
-                  onEvent?.(translated);
-                }
-              }
-            }
-            if (code !== 0 && !events.some((e) => e.type === "done" || e.type === "failed")) {
-              const failEvent = {
-                type: "failed",
-                error: stderr.trim().slice(0, 500) || `Exit code ${code}`,
-                exitCode: code ?? -1,
-                durationMs: 0
-              };
-              events.push(failEvent);
-              onEvent?.(failEvent);
-            }
-            resolve(events);
-          });
-          proc.on("error", (err) => {
-            reject(new Error(`Failed to spawn anagent: ${err.message}`));
-          });
-        });
       }
     };
     exports2.AnagentAdapter = AnagentAdapter2;
@@ -25483,22 +25269,6 @@ var require_HttpSseAdapter = __commonJS({
         const { stdout } = await execFileAsync(bdPath, ["init"], { cwd: dir });
         res.json({ ok: true, output: stdout });
       }));
-      app.post("/api/message", wrap(async (req, res) => {
-        const { content } = req.body;
-        if (!content) {
-          res.status(400).json({ error: "content is required" });
-          return;
-        }
-        const result = await command.sendUserMessage(content);
-        res.json(result);
-      }));
-      app.post("/api/manager/start", wrap(async (_req, res) => {
-        res.json(await command.startManager());
-      }));
-      app.post("/api/manager/end", wrap(async (_req, res) => {
-        await command.endManager();
-        res.json({ ok: true });
-      }));
       app.post("/api/gates/:id/resolve", wrap(async (req, res) => {
         const { note } = req.body;
         await command.resolveGate(param(req, "id"), note);
@@ -25640,9 +25410,6 @@ var require_HttpSseAdapter = __commonJS({
       }));
       app.get("/api/runtimes", wrap(async (_req, res) => {
         res.json(await command.listRuntimes());
-      }));
-      app.get("/api/messages", wrap(async (_req, res) => {
-        res.json(await command.listMessages());
       }));
       app.post("/api/mcp/tools/:name", wrap(async (req, res) => {
         const toolName = param(req, "name");
@@ -25795,27 +25562,6 @@ var import_http_sse_adapter = __toESM(require_dist7());
 var import_express = __toESM(require_express2());
 var import_path = __toESM(require("path"));
 var import_fs = __toESM(require("fs"));
-var DEFAULT_MANAGER_PROMPT = [
-  "You are the manager agent for a software project tracked by Beads (bd).",
-  "The human operator talks only to you. You are responsible for:",
-  "",
-  "1. DECOMPOSITION: When the human gives you a task, use the `decompose` tool",
-  "   to pour a swarm molecule. This creates child issues you can dispatch workers onto.",
-  "2. DISPATCH: Use `dispatchWorker` to send a coding agent onto each ready child issue.",
-  "   Workers run autonomously in headless mode and report back through you.",
-  "3. MONITORING: Use `workerStatus` to check on dispatched workers. Use `listReady`",
-  "   to find the next claimable step.",
-  "4. COMPLETION: When a worker finishes, use `completeIssue` to close its issue.",
-  "   Use `recordProgress` to document what happened.",
-  "5. ESCALATION: When you need a human decision, use `escalate`. This creates a gate",
-  "   that blocks until the human resolves it in the UI. Use this for:",
-  "   - Ambiguous requirements",
-  "   - Architecture decisions",
-  "   - When all workers are stuck",
-  "",
-  "IMPORTANT: Always use the provided tools. Do NOT shell out to bd or try to spawn",
-  "agents directly \u2014 the system handles that for you and records everything."
-].join("\n");
 function startDaemon(opts = {}) {
   const projectDir = opts.projectDir ?? process.env.PROJECT_DIR ?? process.cwd();
   const port = opts.port ?? parseInt(process.env.PORT ?? "3001", 10);
@@ -25856,12 +25602,9 @@ function startDaemon(opts = {}) {
     anagentPath: opts.anagentPath ?? process.env.ANAGENT_PATH,
     cwd: projectDir
   });
-  const managerSystemPrompt = opts.managerSystemPrompt ?? (opts.managerPromptFile ? import_fs.default.readFileSync(opts.managerPromptFile, "utf8") : process.env.MANAGER_SYSTEM_PROMPT ?? DEFAULT_MANAGER_PROMPT);
   const orchestratorConfig = {
     projectDir,
-    managerRuntimeId: managerRuntime,
-    managerSystemPrompt,
-    mcpConfigPath
+    managerRuntimeId: managerRuntime
   };
   const orchestrator = new import_core.Orchestrator(tracker, runtime, eventBus, orchestratorConfig);
   const { app } = (0, import_http_sse_adapter.createHttpSseApp)(orchestrator, orchestrator, eventBus, { port, projectDir });
@@ -25881,14 +25624,9 @@ function startDaemon(opts = {}) {
     console.log(`Project:          ${projectDir}`);
     console.log(`MCP config:       ${mcpConfigPath}`);
     console.log(`Events:           GET /api/events (SSE)`);
-    console.log(`Message:          POST /api/message`);
   });
   const shutdown = async () => {
     console.log("\nShutting down...");
-    try {
-      await orchestrator.endManager();
-    } catch {
-    }
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(1), 5e3).unref();
   };

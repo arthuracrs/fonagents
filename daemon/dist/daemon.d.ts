@@ -4,8 +4,6 @@ export interface DaemonConfig {
     bdPath?: string;
     anagentPath?: string;
     managerRuntimeId?: string;
-    managerSystemPrompt?: string;
-    managerPromptFile?: string;
 }
 export declare function startDaemon(opts?: DaemonConfig): void;
 //# sourceMappingURL=daemon.d.ts.map

@@ -1,4 +1,4 @@
-import type { Issue, Stats, AgentExecution, AgentTrigger, AgentRuntime, Formula, ChatMessage, UiEvent, Gate } from "../types";
+import type { Issue, Stats, AgentExecution, AgentTrigger, AgentRuntime, Formula, UiEvent, Gate } from "../types";
 
 class HttpClient {
   constructor(private readonly base: string) {}
@@ -160,30 +160,6 @@ class TriggersApi {
   }
 }
 
-class ManagerApi {
-  constructor(private readonly http: HttpClient) {}
-
-  send(content: string): Promise<{ userMessageId: string; managerMessageId: string }> {
-    return this.http.request("/message", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
-    });
-  }
-
-  messages(): Promise<ChatMessage[]> {
-    return this.http.request<ChatMessage[]>("/messages");
-  }
-
-  start(): Promise<{ sessionId: string }> {
-    return this.http.request("/manager/start", { method: "POST" });
-  }
-
-  end(): Promise<{ ok: boolean }> {
-    return this.http.request("/manager/end", { method: "POST" });
-  }
-}
-
 class GatesApi {
   constructor(private readonly http: HttpClient) {}
 
@@ -207,7 +183,6 @@ export class ApiClient {
   readonly executions: ExecutionsApi;
   readonly triggers: TriggersApi;
   readonly formulas: FormulasApi;
-  readonly manager: ManagerApi;
   readonly gates: GatesApi;
   private readonly http: HttpClient;
 
@@ -219,7 +194,6 @@ export class ApiClient {
     this.executions = new ExecutionsApi(this.http);
     this.triggers = new TriggersApi(this.http);
     this.formulas = new FormulasApi(this.http);
-    this.manager = new ManagerApi(this.http);
     this.gates = new GatesApi(this.http);
   }
 

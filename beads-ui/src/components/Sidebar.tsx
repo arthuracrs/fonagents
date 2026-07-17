@@ -1,4 +1,4 @@
-export type View = "manager" | "all" | "ready" | "sessions" | "formulas" | "graph";
+export type View = "all" | "ready" | "sessions" | "formulas" | "graph";
 
 interface Props {
   view: View;
@@ -6,7 +6,6 @@ interface Props {
 }
 
 const navItems: { label: string; view: View; icon: string }[] = [
-  { label: "Manager",      view: "manager",     icon: "◈" },
   { label: "All Issues",   view: "all",         icon: "⊞" },
   { label: "Ready",        view: "ready",        icon: "→" },
   { label: "Graph",        view: "graph",        icon: "◇" },

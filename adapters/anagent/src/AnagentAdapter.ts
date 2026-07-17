@@ -6,12 +6,8 @@ import type {
   AgentStreamEvent,
   ExecMode,
   IssueId,
-  ManagerSession,
   RuntimeInfo,
-  SessionId,
   SpawnWorkerInput,
-  StartManagerInput,
-  SendManagerTurnInput,
   WorkerHandle,
   WorkerId,
 } from '@fonagents/core'
@@ -22,14 +18,9 @@ export interface AnagentAdapterConfig {
   cwd: string
 }
 
-// Implements AgentRuntimePort by shelling out to `anagent run --stream`.
-// Workers are one-shot anagent invocations. The manager is a series of
-// anagent invocations linked by --resume (each turn is a separate process;
-// claude code's session JSONL provides continuity).
 export class AnagentAdapter implements AgentRuntimePort {
   private readonly workers = new Map<WorkerId, WorkerHandle & { process?: ChildProcess }>()
   private readonly listeners = new Map<WorkerId, Set<(event: AgentStreamEvent) => void>>()
-  private readonly managerSessions = new Map<SessionId, ManagerSession & { runtimeId?: string; mcpConfigPath?: string }>()
   private readonly bin: string
   private readonly binArgs: string[]
   private readonly cwd: string
@@ -105,9 +96,6 @@ export class AnagentAdapter implements AgentRuntimePort {
 
     this.pipeEvents(id, proc)
 
-    // Track whether the NDJSON stream emitted a terminal (done/failed) event.
-    // If the process is killed without emitting one, we synthesize it in the
-    // close handler so the UI learns the worker stopped.
     let streamEmittedTerminal = false
     const tracker = this.subscribeWorker(id, (event) => {
       if (event.type === 'done' || event.type === 'failed') streamEmittedTerminal = true
@@ -168,71 +156,6 @@ export class AnagentAdapter implements AgentRuntimePort {
       .map((w) => ({ ...w }))
   }
 
-  // ── Manager (persistent session via --resume) ────────────────────────────────
-
-  async startManager(input: StartManagerInput): Promise<{ sessionId: SessionId; events: AgentStreamEvent[] }> {
-    const args = [
-      ...this.binArgs,
-      'run', input.bootstrapMessage,
-      '--stream',
-      '--runtime', input.runtimeId,
-      '--mode', 'headless',
-      '--system-prompt', input.systemPrompt,
-      '--cwd', input.cwd ?? this.cwd,
-    ]
-    if (input.mcpConfigPath) args.push('--mcp-config', input.mcpConfigPath)
-
-    const events = await this.runStreamingSession(args, input.onEvent)
-    const sessionEvent = events.find((e) => e.type === 'session')
-    if (!sessionEvent || sessionEvent.type !== 'session') {
-      throw new Error('Manager bootstrap did not emit a session event — cannot resume.')
-    }
-    const sessionId = sessionEvent.sessionId
-
-    this.managerSessions.set(sessionId, {
-      sessionId,
-      startedAt: new Date().toISOString(),
-      status: 'active',
-      runtimeId: input.runtimeId,
-      mcpConfigPath: input.mcpConfigPath,
-    })
-
-    return { sessionId, events }
-  }
-
-  async sendManagerTurn(input: SendManagerTurnInput): Promise<AgentStreamEvent[]> {
-    const session = this.managerSessions.get(input.sessionId)
-    if (!session) throw new Error(`No manager session found for id ${input.sessionId}`)
-
-    // Reuse the same runtime + MCP config as the bootstrap turn.
-    // Without --runtime, anagent defaults to 'opencode' — this was the bug
-    // that caused manager turns to run opencode instead of claude-code.
-    const args = [
-      ...this.binArgs,
-      'run', input.message,
-      '--stream',
-      '--resume', input.sessionId,
-      '--cwd', this.cwd,
-    ]
-    if (session.runtimeId) args.push('--runtime', session.runtimeId)
-    if (session.mcpConfigPath) args.push('--mcp-config', session.mcpConfigPath)
-
-    const events = await this.runStreamingSession(args, input.onEvent)
-    return events
-  }
-
-  async endManager(sessionId: SessionId): Promise<void> {
-    const session = this.managerSessions.get(sessionId)
-    if (session) {
-      session.status = 'ended'
-      this.managerSessions.delete(sessionId)
-    }
-  }
-
-  getManagerSession(sessionId: SessionId): ManagerSession | undefined {
-    return this.managerSessions.get(sessionId)
-  }
-
   // ── Internals ────────────────────────────────────────────────────────────────
 
   private pipeEvents(workerId: WorkerId, proc: ChildProcess): void {
@@ -259,71 +182,6 @@ export class AnagentAdapter implements AgentRuntimePort {
     if (!subs) return
     for (const cb of subs) cb(event)
   }
-
-  private runStreamingSession(
-    args: string[],
-    onEvent?: (event: AgentStreamEvent) => void,
-  ): Promise<AgentStreamEvent[]> {
-    return new Promise((resolve, reject) => {
-      const proc = spawn(this.bin, args, {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        cwd: this.cwd,
-      })
-
-      const events: AgentStreamEvent[] = []
-      let buf = ''
-      let stderr = ''
-
-      proc.stdout?.on('data', (data: Buffer) => {
-        buf += data.toString()
-        const lines = buf.split('\n')
-        buf = lines.pop() ?? ''
-        for (const line of lines) {
-          const raw = parseNdjsonLine(line)
-          if (!raw) continue
-          const translated = translateEvent(raw)
-          if (translated) {
-            events.push(translated)
-            onEvent?.(translated)
-          }
-        }
-      })
-
-      proc.stderr?.on('data', (data: Buffer) => {
-        stderr += data.toString()
-      })
-
-      proc.on('close', (code) => {
-        // Flush remaining buffer
-        if (buf.trim()) {
-          const raw = parseNdjsonLine(buf)
-          if (raw) {
-            const translated = translateEvent(raw)
-            if (translated) {
-              events.push(translated)
-              onEvent?.(translated)
-            }
-          }
-        }
-
-        if (code !== 0 && !events.some((e) => e.type === 'done' || e.type === 'failed')) {
-          const failEvent: AgentStreamEvent = {
-            type: 'failed',
-            error: stderr.trim().slice(0, 500) || `Exit code ${code}`,
-            exitCode: code ?? -1,
-            durationMs: 0,
-          }
-          events.push(failEvent)
-          onEvent?.(failEvent)
-        }
-        resolve(events)
-      })
-
-      proc.on('error', (err) => {
-        reject(new Error(`Failed to spawn anagent: ${err.message}`))
-      })
-    })
-  }
 }
 
 // ── Anagent binary resolution ─────────────────────────────────────────────────
@@ -331,17 +189,14 @@ export class AnagentAdapter implements AgentRuntimePort {
 function resolveAnagent(override?: string): { bin: string; prefixArgs: string[] } {
   if (override) return { bin: override, prefixArgs: [] }
 
-  // 1. Check ANAGENT_PATH env
   if (process.env.ANAGENT_PATH) return { bin: process.env.ANAGENT_PATH, prefixArgs: [] }
 
-  // 2. Check if anagent is on PATH
   const PATH = process.env.PATH || ''
   for (const dir of PATH.split(':')) {
     const candidate = path.join(dir, 'anagent')
     if (fs.existsSync(candidate)) return { bin: candidate, prefixArgs: [] }
   }
 
-  // 3. npx fallback
   return { bin: 'npx', prefixArgs: ['--yes', 'github:arthuracrs/anagent'] }
 }
 

@@ -65,24 +65,6 @@ function createHttpSseApp(command, managerTools, eventBus, config) {
         const { stdout } = await execFileAsync(bdPath, ['init'], { cwd: dir });
         res.json({ ok: true, output: stdout });
     }));
-    // ── Conversation ────────────────────────────────────────────────────────────
-    app.post('/api/message', wrap(async (req, res) => {
-        const { content } = req.body;
-        if (!content) {
-            res.status(400).json({ error: 'content is required' });
-            return;
-        }
-        const result = await command.sendUserMessage(content);
-        res.json(result);
-    }));
-    // ── Manager lifecycle ───────────────────────────────────────────────────────
-    app.post('/api/manager/start', wrap(async (_req, res) => {
-        res.json(await command.startManager());
-    }));
-    app.post('/api/manager/end', wrap(async (_req, res) => {
-        await command.endManager();
-        res.json({ ok: true });
-    }));
     // ── Gates ───────────────────────────────────────────────────────────────────
     app.post('/api/gates/:id/resolve', wrap(async (req, res) => {
         const { note } = req.body;
@@ -237,10 +219,6 @@ function createHttpSseApp(command, managerTools, eventBus, config) {
     }));
     app.get('/api/runtimes', wrap(async (_req, res) => {
         res.json(await command.listRuntimes());
-    }));
-    // ── Messages ────────────────────────────────────────────────────────────────
-    app.get('/api/messages', wrap(async (_req, res) => {
-        res.json(await command.listMessages());
     }));
     // ── MCP tool endpoint (called by the MCP server script) ──────────────────────
     app.post('/api/mcp/tools/:name', wrap(async (req, res) => {

@@ -113,15 +113,7 @@ export interface WorkerHandle {
   exitCode?: number
 }
 
-export interface ManagerSession {
-  sessionId: SessionId
-  formulaName?: string
-  rootMoleculeId?: MoleculeId
-  startedAt: string
-  status: 'active' | 'idle' | 'ended'
-}
-
-// Events streamed from an agent runtime (worker or manager turn).
+// Events streamed from an agent runtime (worker).
 export type AgentStreamEvent =
   | { type: 'text'; delta: string }
   | { type: 'tool_use'; tool: string; input: unknown }
@@ -129,19 +121,6 @@ export type AgentStreamEvent =
   | { type: 'session'; sessionId: SessionId }
   | { type: 'done'; exitCode: number; durationMs: number }
   | { type: 'failed'; error: string; exitCode: number; durationMs: number }
-
-// ── Conversation ──────────────────────────────────────────────────────────────
-
-export type MessageRole = 'user' | 'manager' | 'system'
-
-export interface ChatMessage {
-  id: string
-  role: MessageRole
-  content: string
-  createdAt: string
-  moleculeId?: MoleculeId
-  workerId?: WorkerId
-}
 
 // ── Audit ─────────────────────────────────────────────────────────────────────
 

@@ -84,24 +84,6 @@ export function createHttpSseApp(
     res.json({ ok: true, output: stdout })
   }))
 
-  // ── Conversation ────────────────────────────────────────────────────────────
-  app.post('/api/message', wrap(async (req, res) => {
-    const { content } = req.body as { content: string }
-    if (!content) { res.status(400).json({ error: 'content is required' }); return }
-    const result = await command.sendUserMessage(content)
-    res.json(result)
-  }))
-
-  // ── Manager lifecycle ───────────────────────────────────────────────────────
-  app.post('/api/manager/start', wrap(async (_req, res) => {
-    res.json(await command.startManager())
-  }))
-
-  app.post('/api/manager/end', wrap(async (_req, res) => {
-    await command.endManager()
-    res.json({ ok: true })
-  }))
-
   // ── Gates ───────────────────────────────────────────────────────────────────
   app.post('/api/gates/:id/resolve', wrap(async (req, res) => {
     const { note } = req.body as { note?: string }
@@ -270,11 +252,6 @@ export function createHttpSseApp(
 
   app.get('/api/runtimes', wrap(async (_req, res) => {
     res.json(await command.listRuntimes())
-  }))
-
-  // ── Messages ────────────────────────────────────────────────────────────────
-  app.get('/api/messages', wrap(async (_req, res) => {
-    res.json(await command.listMessages())
   }))
 
   // ── MCP tool endpoint (called by the MCP server script) ──────────────────────

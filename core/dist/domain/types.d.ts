@@ -84,13 +84,6 @@ export interface WorkerHandle {
     finishedAt?: string;
     exitCode?: number;
 }
-export interface ManagerSession {
-    sessionId: SessionId;
-    formulaName?: string;
-    rootMoleculeId?: MoleculeId;
-    startedAt: string;
-    status: 'active' | 'idle' | 'ended';
-}
 export type AgentStreamEvent = {
     type: 'text';
     delta: string;
@@ -116,15 +109,6 @@ export type AgentStreamEvent = {
     exitCode: number;
     durationMs: number;
 };
-export type MessageRole = 'user' | 'manager' | 'system';
-export interface ChatMessage {
-    id: string;
-    role: MessageRole;
-    content: string;
-    createdAt: string;
-    moleculeId?: MoleculeId;
-    workerId?: WorkerId;
-}
 export interface AuditEntry {
     actor: string;
     event: string;

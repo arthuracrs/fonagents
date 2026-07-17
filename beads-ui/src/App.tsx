@@ -10,14 +10,12 @@ import { ExecutionView } from "./components/ExecutionView";
 import { FormulasView } from "./components/FormulasView";
 import { DependencyGraphView } from "./components/DependencyGraphView";
 import { StatsBar } from "./components/StatsBar";
-import { ManagerChat } from "./components/ManagerChat";
 
-const NON_ISSUE_VIEWS = new Set(["manager", "sessions", "formulas", "graph"]);
+const NON_ISSUE_VIEWS = new Set(["sessions", "formulas", "graph"]);
 
 type Layout = "list" | "board";
 
 const viewLabel: Record<View, string> = {
-  manager: "Manager",
   all: "All Issues",
   ready: "Ready to Work",
   sessions: "Sessions",
@@ -273,10 +271,6 @@ export default function App() {
             </button>
           </div>
         </div>
-
-        {view === "manager" && (
-          <ManagerChat />
-        )}
 
         {view === "sessions" && (
           <div className="flex flex-1 items-center justify-center text-[var(--text-muted)] text-sm">

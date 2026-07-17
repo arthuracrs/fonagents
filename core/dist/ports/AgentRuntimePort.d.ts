@@ -1,4 +1,4 @@
-import type { AgentStreamEvent, ExecMode, IssueId, RuntimeId, RuntimeInfo, SessionId, WorkerHandle, WorkerId } from '../domain/types.js';
+import type { AgentStreamEvent, ExecMode, IssueId, RuntimeId, RuntimeInfo, WorkerHandle, WorkerId } from '../domain/types.js';
 export interface AgentRuntimePort {
     listRuntimes(): Promise<RuntimeInfo[]>;
     spawnWorker(input: SpawnWorkerInput): Promise<WorkerHandle>;
@@ -8,13 +8,6 @@ export interface AgentRuntimePort {
     };
     getWorker(workerId: WorkerId): WorkerHandle | undefined;
     getWorkersForIssue(issueId: IssueId): WorkerHandle[];
-    startManager(input: StartManagerInput): Promise<{
-        sessionId: SessionId;
-        events: AgentStreamEvent[];
-    }>;
-    sendManagerTurn(input: SendManagerTurnInput): Promise<AgentStreamEvent[]>;
-    endManager(sessionId: SessionId): Promise<void>;
-    getManagerSession(sessionId: SessionId): import('../domain/types.js').ManagerSession | undefined;
 }
 export interface SpawnWorkerInput {
     issueId: IssueId;
@@ -23,18 +16,5 @@ export interface SpawnWorkerInput {
     systemPrompt: string;
     mode?: ExecMode;
     cwd: string;
-}
-export interface StartManagerInput {
-    runtimeId: RuntimeId;
-    systemPrompt: string;
-    bootstrapMessage: string;
-    mcpConfigPath?: string;
-    cwd: string;
-    onEvent?: (event: AgentStreamEvent) => void;
-}
-export interface SendManagerTurnInput {
-    sessionId: SessionId;
-    message: string;
-    onEvent?: (event: AgentStreamEvent) => void;
 }
 //# sourceMappingURL=AgentRuntimePort.d.ts.map

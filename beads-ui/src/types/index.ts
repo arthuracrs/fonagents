@@ -95,19 +95,6 @@ export interface AgentTrigger {
   createdAt: string;
 }
 
-// ── Manager chat ──────────────────────────────────────────────────────────────
-
-export type MessageRole = "user" | "manager" | "system";
-
-export interface ChatMessage {
-  id: string;
-  role: MessageRole;
-  content: string;
-  createdAt: string;
-  moleculeId?: string;
-  workerId?: string;
-}
-
 // ── Gates ─────────────────────────────────────────────────────────────────────
 
 export type GateType = "human" | "timer" | "gh:run" | "gh:pr" | "bead";
@@ -127,10 +114,6 @@ export interface Gate {
 // ── SSE events from the daemon ────────────────────────────────────────────────
 
 export type UiEvent =
-  | { type: "user_message"; message: ChatMessage }
-  | { type: "manager_message"; message: ChatMessage }
-  | { type: "manager_stream"; delta: string }
-  | { type: "manager_thinking"; active: boolean }
   | { type: "worker_started"; worker: { id: string; issueId: string; runtimeId: string; status: string } }
   | { type: "worker_output"; workerId: string; delta: string }
   | { type: "worker_status"; workerId: string; status: string; exitCode?: number }
@@ -138,6 +121,4 @@ export type UiEvent =
   | { type: "gate_resolved"; gateId: string }
   | { type: "molecule_poured"; moleculeId: string; formulaName: string }
   | { type: "issue_changed"; issueId: string; change: string }
-  | { type: "manager_started"; sessionId: string }
-  | { type: "manager_ended"; sessionId: string }
   | { type: "error"; message: string };
