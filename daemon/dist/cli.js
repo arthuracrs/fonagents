@@ -25562,6 +25562,7 @@ var import_http_sse_adapter = __toESM(require_dist7());
 var import_express = __toESM(require_express2());
 var import_path = __toESM(require("path"));
 var import_fs = __toESM(require("fs"));
+var _server = null;
 function startDaemon(opts = {}) {
   const projectDir = opts.projectDir ?? process.env.PROJECT_DIR ?? process.cwd();
   const port = opts.port ?? parseInt(process.env.PORT ?? "3001", 10);
@@ -25608,6 +25609,9 @@ function startDaemon(opts = {}) {
   };
   const orchestrator = new import_core.Orchestrator(tracker, runtime, eventBus, orchestratorConfig);
   const { app } = (0, import_http_sse_adapter.createHttpSseApp)(orchestrator, orchestrator, eventBus, { port, projectDir });
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", port, projectDir });
+  });
   const beadsUiDist = import_path.default.join(pkgRoot, "beads-ui/dist");
   if (import_fs.default.existsSync(beadsUiDist)) {
     app.use(import_express.default.static(beadsUiDist));
@@ -25619,23 +25623,85 @@ function startDaemon(opts = {}) {
       res.sendFile(import_path.default.join(beadsUiDist, "index.html"));
     });
   }
-  const server = app.listen(port, () => {
-    console.log(`fonagents daemon: http://localhost:${port}`);
-    console.log(`Project:          ${projectDir}`);
-    console.log(`MCP config:       ${mcpConfigPath}`);
-    console.log(`Events:           GET /api/events (SSE)`);
+  return new Promise((resolve, reject) => {
+    try {
+      const server = app.listen(port, () => {
+        const actualPort = server.address().port;
+        _server = server;
+        console.log(`fonagents daemon: http://localhost:${actualPort}`);
+        console.log(`Project:          ${projectDir}`);
+        console.log(`MCP config:       ${mcpConfigPath}`);
+        console.log(`Events:           GET /api/events (SSE)`);
+        resolve({ port: actualPort, mcpConfigPath, projectDir, managerRuntimeId: managerRuntime });
+      });
+    } catch (err) {
+      reject(err);
+    }
   });
-  const shutdown = async () => {
-    console.log("\nShutting down...");
-    server.close(() => process.exit(0));
-    setTimeout(() => process.exit(1), 5e3).unref();
-  };
-  process.on("SIGTERM", shutdown);
-  process.on("SIGINT", shutdown);
 }
+function stopDaemon() {
+  if (_server) {
+    const s = _server;
+    _server = null;
+    s.close(() => {
+    });
+  }
+}
+
+// src/manager-prompt.ts
+var MANAGER_PROMPT = `You are the fonagents Manager. You coordinate AI-assisted development by breaking down work, dispatching agents, and tracking progress through beads.
+
+Available MCP tools (fonagents):
+
+tool  | decompose
+---   | ---
+input | formulaName (string, required), vars (object, optional)
+desc  | Decompose a request into a swarm molecule of child issues using a beads formula.
+
+tool  | dispatchWorker
+---   | ---
+input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
+desc  | Dispatch a one-shot coding agent onto a ready child issue.
+
+tool  | listReady
+---   | ---
+input | moleculeId (string, optional)
+desc  | List claimable/ready work, optionally scoped to a molecule.
+
+tool  | workerStatus
+---   | ---
+input | workerId (string, optional), issueId (string, optional)
+desc  | Inspect worker progress by worker id or issue id.
+
+tool  | escalate
+---   | ---
+input | reason (string, required), issueId (string, optional)
+desc  | Escalate to the human operator. Creates a human gate and blocks until resolved via the UI.
+
+tool  | recordProgress
+---   | ---
+input | issueId (string, required), body (string, required)
+desc  | Record a progress comment on an issue (audit trail).
+
+tool  | completeIssue
+---   | ---
+input | issueId (string, required), reason (string, optional)
+desc  | Mark an issue as complete.
+
+Workflow:
+1. When the user gives a high-level request, use \`decompose\` to break it into issues with a beads formula.
+2. Use \`listReady\` to see available work.
+3. Dispatch \`dispatchWorker\` to assign issues to coding agents.
+4. Monitor progress with \`workerStatus\`.
+5. Record updates with \`recordProgress\`.
+6. Mark completed issues with \`completeIssue\`.
+7. Use \`escalate\` when you need human input or approval.
+
+The web dashboard at http://localhost:PORT provides visualization and monitoring.`;
 
 // src/cli.ts
 var import_child_process = require("child_process");
+var import_child_process2 = require("child_process");
 var import_net = __toESM(require("net"));
 function findFreePort(start) {
   return new Promise((resolve, reject) => {
@@ -25649,18 +25715,73 @@ function findFreePort(start) {
 }
 function openBrowser(url) {
   const cmd = process.platform === "darwin" ? `open "${url}"` : process.platform === "win32" ? `start "" "${url}"` : `xdg-open "${url}"`;
-  (0, import_child_process.exec)(cmd);
+  (0, import_child_process2.exec)(cmd);
+}
+function parseArgs() {
+  const argv = process.argv.slice(2);
+  const webOnly = argv.includes("--web-only");
+  const runtimeIdx = argv.indexOf("--runtime");
+  const runtime = runtimeIdx >= 0 ? argv[runtimeIdx + 1] : void 0;
+  const portIdx = argv.indexOf("--port");
+  const port = portIdx >= 0 ? parseInt(argv[portIdx + 1], 10) : void 0;
+  return { webOnly, runtime, port };
 }
 async function main() {
-  const port = await findFreePort(parseInt(process.env.PORT ?? "3001", 10));
-  startDaemon({ port });
-  setTimeout(() => {
-    const url = `http://localhost:${port}`;
+  const args = parseArgs();
+  const port = await findFreePort(args.port ?? parseInt(process.env.PORT ?? "3001", 10));
+  const handle = await startDaemon({ port, managerRuntimeId: args.runtime });
+  if (args.webOnly) {
+    const url = `http://localhost:${handle.port}`;
     console.log(`Opening ${url}`);
     openBrowser(url);
-  }, 800);
+    return;
+  }
+  const runtimeId = args.runtime ?? process.env.MANAGER_RUNTIME ?? handle.managerRuntimeId;
+  const projectDir = handle.projectDir;
+  const daemonUrl = `http://localhost:${handle.port}`;
+  console.log(`
+Manager mode \u2014 starting ${runtimeId} agent...`);
+  console.log(`Daemon: ${daemonUrl}  |  Project: ${projectDir}
+`);
+  const prompt = MANAGER_PROMPT.replace(/PORT/g, String(handle.port));
+  const agentProc = launchAgent(runtimeId, prompt, handle.mcpConfigPath, projectDir);
+  const onSigTerm = () => {
+    agentProc.kill("SIGTERM");
+  };
+  process.on("SIGTERM", onSigTerm);
+  const exitCode = await new Promise((resolve) => {
+    agentProc.on("exit", (code) => resolve(code));
+    agentProc.on("error", () => resolve(null));
+  });
+  process.off("SIGTERM", onSigTerm);
+  console.log(`
+Agent exited (code: ${exitCode ?? "error"}). Shutting down...`);
+  stopDaemon();
+  process.exit(exitCode ?? 0);
 }
-main();
+function launchAgent(runtimeId, prompt, mcpConfigPath, projectDir) {
+  switch (runtimeId) {
+    case "claude-code":
+      return (0, import_child_process.spawn)("claude", [
+        "--dangerously-skip-permissions",
+        "--system-prompt",
+        prompt,
+        "--mcp-config",
+        mcpConfigPath
+      ], { stdio: "inherit", cwd: projectDir });
+    case "opencode":
+    default:
+      return (0, import_child_process.spawn)("opencode", [
+        "--prompt",
+        prompt
+      ], { stdio: "inherit", cwd: projectDir });
+  }
+}
+main().catch((err) => {
+  console.error(`Error: ${err.message}`);
+  stopDaemon();
+  process.exit(1);
+});
 /*! Bundled license information:
 
 depd/index.js:

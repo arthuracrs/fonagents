@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startDaemon = startDaemon;
+exports.stopDaemon = stopDaemon;
 const core_1 = require("@fonagents/core");
 const beads_adapter_1 = require("@fonagents/beads-adapter");
 const anagent_adapter_1 = require("@fonagents/anagent-adapter");
@@ -11,6 +12,7 @@ const http_sse_adapter_1 = require("@fonagents/http-sse-adapter");
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+let _server = null;
 function startDaemon(opts = {}) {
     const projectDir = opts.projectDir ?? process.env.PROJECT_DIR ?? process.cwd();
     const port = opts.port ?? parseInt(process.env.PORT ?? '3001', 10);
@@ -59,6 +61,9 @@ function startDaemon(opts = {}) {
     };
     const orchestrator = new core_1.Orchestrator(tracker, runtime, eventBus, orchestratorConfig);
     const { app } = (0, http_sse_adapter_1.createHttpSseApp)(orchestrator, orchestrator, eventBus, { port, projectDir });
+    app.get('/api/health', (_req, res) => {
+        res.json({ status: 'ok', port, projectDir });
+    });
     const beadsUiDist = path_1.default.join(pkgRoot, 'beads-ui/dist');
     if (fs_1.default.existsSync(beadsUiDist)) {
         app.use(express_1.default.static(beadsUiDist));
@@ -70,18 +75,28 @@ function startDaemon(opts = {}) {
             res.sendFile(path_1.default.join(beadsUiDist, 'index.html'));
         });
     }
-    const server = app.listen(port, () => {
-        console.log(`fonagents daemon: http://localhost:${port}`);
-        console.log(`Project:          ${projectDir}`);
-        console.log(`MCP config:       ${mcpConfigPath}`);
-        console.log(`Events:           GET /api/events (SSE)`);
+    return new Promise((resolve, reject) => {
+        try {
+            const server = app.listen(port, () => {
+                const actualPort = server.address().port;
+                _server = server;
+                console.log(`fonagents daemon: http://localhost:${actualPort}`);
+                console.log(`Project:          ${projectDir}`);
+                console.log(`MCP config:       ${mcpConfigPath}`);
+                console.log(`Events:           GET /api/events (SSE)`);
+                resolve({ port: actualPort, mcpConfigPath, projectDir, managerRuntimeId: managerRuntime });
+            });
+        }
+        catch (err) {
+            reject(err);
+        }
     });
-    const shutdown = async () => {
-        console.log('\nShutting down...');
-        server.close(() => process.exit(0));
-        setTimeout(() => process.exit(1), 5000).unref();
-    };
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
+}
+function stopDaemon() {
+    if (_server) {
+        const s = _server;
+        _server = null;
+        s.close(() => { });
+    }
 }
 //# sourceMappingURL=daemon.js.map

@@ -1,2 +1,2 @@
-export { startDaemon } from './daemon.js'
-export type { DaemonConfig } from './daemon.js'
+export { startDaemon, stopDaemon } from './daemon.js'
+export type { DaemonConfig, DaemonHandle } from './daemon.js'

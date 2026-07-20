@@ -7,6 +7,7 @@ import express from 'express'
 import type { Express } from 'express'
 import path from 'path'
 import fs from 'fs'
+import http from 'http'
 
 export interface DaemonConfig {
   port?: number
@@ -16,7 +17,16 @@ export interface DaemonConfig {
   managerRuntimeId?: string
 }
 
-export function startDaemon(opts: DaemonConfig = {}): void {
+export interface DaemonHandle {
+  port: number
+  mcpConfigPath: string
+  projectDir: string
+  managerRuntimeId: string
+}
+
+let _server: http.Server | null = null
+
+export function startDaemon(opts: DaemonConfig = {}): Promise<DaemonHandle> {
   const projectDir = opts.projectDir ?? process.env.PROJECT_DIR ?? process.cwd()
   const port = opts.port ?? parseInt(process.env.PORT ?? '3001', 10)
 
@@ -71,6 +81,10 @@ export function startDaemon(opts: DaemonConfig = {}): void {
 
   const { app } = createHttpSseApp(orchestrator, orchestrator, eventBus, { port, projectDir })
 
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', port, projectDir })
+  })
+
   const beadsUiDist = path.join(pkgRoot, 'beads-ui/dist')
   if (fs.existsSync(beadsUiDist)) {
     app.use(express.static(beadsUiDist))
@@ -83,18 +97,27 @@ export function startDaemon(opts: DaemonConfig = {}): void {
     })
   }
 
-  const server = app.listen(port, () => {
-    console.log(`fonagents daemon: http://localhost:${port}`)
-    console.log(`Project:          ${projectDir}`)
-    console.log(`MCP config:       ${mcpConfigPath}`)
-    console.log(`Events:           GET /api/events (SSE)`)
+  return new Promise((resolve, reject) => {
+    try {
+      const server = app.listen(port, () => {
+        const actualPort = (server.address() as { port: number }).port
+        _server = server
+        console.log(`fonagents daemon: http://localhost:${actualPort}`)
+        console.log(`Project:          ${projectDir}`)
+        console.log(`MCP config:       ${mcpConfigPath}`)
+        console.log(`Events:           GET /api/events (SSE)`)
+        resolve({ port: actualPort, mcpConfigPath, projectDir, managerRuntimeId: managerRuntime })
+      })
+    } catch (err) {
+      reject(err)
+    }
   })
+}
 
-  const shutdown = async () => {
-    console.log('\nShutting down...')
-    server.close(() => process.exit(0))
-    setTimeout(() => process.exit(1), 5000).unref()
+export function stopDaemon(): void {
+  if (_server) {
+    const s = _server
+    _server = null
+    s.close(() => {})
   }
-  process.on('SIGTERM', shutdown)
-  process.on('SIGINT', shutdown)
 }

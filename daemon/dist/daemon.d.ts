@@ -5,5 +5,12 @@ export interface DaemonConfig {
     anagentPath?: string;
     managerRuntimeId?: string;
 }
-export declare function startDaemon(opts?: DaemonConfig): void;
+export interface DaemonHandle {
+    port: number;
+    mcpConfigPath: string;
+    projectDir: string;
+    managerRuntimeId: string;
+}
+export declare function startDaemon(opts?: DaemonConfig): Promise<DaemonHandle>;
+export declare function stopDaemon(): void;
 //# sourceMappingURL=daemon.d.ts.map
