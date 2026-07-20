@@ -11,14 +11,13 @@ import { FormulasView } from "./components/FormulasView";
 import { DependencyGraphView } from "./components/DependencyGraphView";
 import { StatsBar } from "./components/StatsBar";
 
-const NON_ISSUE_VIEWS = new Set(["sessions", "formulas", "graph"]);
+const NON_ISSUE_VIEWS = new Set(["formulas", "graph"]);
 
 type Layout = "list" | "board";
 
 const viewLabel: Record<View, string> = {
   all: "All Issues",
   ready: "Ready to Work",
-  sessions: "Sessions",
   formulas: "Formulas",
   graph: "Dependency Graph",
 };
@@ -271,12 +270,6 @@ export default function App() {
             </button>
           </div>
         </div>
-
-        {view === "sessions" && (
-          <div className="flex flex-1 items-center justify-center text-[var(--text-muted)] text-sm">
-            Sessions view is not available in this version.
-          </div>
-        )}
 
         {view === "formulas" && <FormulasView />}
 
