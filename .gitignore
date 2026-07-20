@@ -30,3 +30,9 @@ beads-ui/.beads/*.db
 
 # NOTE: dist/ directories ARE committed — the archive URL install ships
 # prebuilt files. Run `npm run build` before committing.
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
