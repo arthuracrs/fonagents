@@ -3,7 +3,9 @@ import { startDaemon, stopDaemon } from './daemon.js'
 import { MANAGER_PROMPT } from './manager-prompt.js'
 import { spawn } from 'child_process'
 import { exec } from 'child_process'
+import fs from 'fs'
 import net from 'net'
+import path from 'path'
 
 function findFreePort(start: number): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -36,6 +38,24 @@ function parseArgs(): { webOnly: boolean; runtime?: string; port?: number } {
   return { webOnly, runtime, port }
 }
 
+function writeAgentFile(projectDir: string, prompt: string): void {
+  const agentsDir = path.join(projectDir, '.opencode', 'agents')
+  fs.mkdirSync(agentsDir, { recursive: true })
+  const content = `---
+description: fonagents Manager — coordinates AI development through beads
+mode: primary
+permission:
+  task: allow
+  webfetch: allow
+  websearch: allow
+  skill: allow
+  fonagents_*: allow
+---
+
+${prompt}`
+  fs.writeFileSync(path.join(agentsDir, 'fonagents-manager.md'), content, 'utf8')
+}
+
 async function main() {
   const args = parseArgs()
   const port = await findFreePort(args.port ?? parseInt(process.env.PORT ?? '3001', 10))
@@ -58,6 +78,7 @@ async function main() {
   console.log(`Daemon: ${daemonUrl}  |  Project: ${projectDir}\n`)
 
   const prompt = MANAGER_PROMPT.replace(/PORT/g, String(handle.port))
+  writeAgentFile(projectDir, prompt)
 
   const agentProc = launchAgent(runtimeId, prompt, handle.mcpConfigPath, projectDir)
 
@@ -93,7 +114,7 @@ function launchAgent(
     case 'opencode':
     default:
       return spawn('opencode', [
-        '--prompt', prompt,
+        '--agent', 'fonagents-manager',
       ], { stdio: 'inherit', cwd: projectDir })
   }
 }
