@@ -62,7 +62,7 @@ export async function runTmux(
       .filter(l => !/^Pane is dead/.test(l))
       .join('\n')
       .trim()
-    } finally {
+  } finally {
     try { await execFileAsync('tmux', ['set-option', '-t', sessionName, 'remain-on-exit', 'on']) } catch { /* already dead */ }
     cleanupTempFiles(files)
   }
