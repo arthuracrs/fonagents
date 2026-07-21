@@ -244,10 +244,35 @@ function launchAgent(
   }
 }
 
+function printHelp(): void {
+  console.log(`
+Usage: fonagents [command] [options]
+
+Commands:
+  (none)              Start the daemon + manager agent
+  workers             List running workers and attach to one
+  tail <worker-id>    Attach directly to a worker's tmux session
+  help, --help, -h    Show this help
+
+Options:
+  --web-only          Start the daemon without launching a manager agent
+  --runtime <id>      Agent runtime to use (opencode, claude-code, cursor)
+  --port <number>     Port for the daemon HTTP server
+
+Examples:
+  fonagents                       Start daemon + manager
+  fonagents --web-only            Start daemon only (open browser)
+  fonagents workers               List workers, pick one to tail
+  fonagents tail m3abc12          Attach to a specific worker
+`)
+}
+
 async function main() {
   const subcommand = process.argv[2]
 
-  if (subcommand === 'workers') {
+  if (subcommand === 'help' || subcommand === '--help' || subcommand === '-h') {
+    printHelp()
+  } else if (subcommand === 'workers') {
     await runWorkers()
   } else if (subcommand === 'tail') {
     const workerId = process.argv[3]

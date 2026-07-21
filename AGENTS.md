@@ -7,16 +7,16 @@ When installing or updating `fonagents` globally, use the GitHub archive URL, no
 Correct:
 
 ```bash
-npm install -g https://github.com/arthurcalebe/fonagents/archive/main.tar.gz
+npm install -g https://github.com/arthuracrs/fonagents/archive/main.tar.gz
 ```
 
 To update:
 
 ```bash
-npm uninstall -g fonagents && npm install -g https://github.com/arthurcalebe/fonagents/archive/main.tar.gz
+npm uninstall -g fonagents && npm install -g https://github.com/arthuracrs/fonagents/archive/main.tar.gz
 ```
 
-Do not use `npm install -g github:arthurcalebe/fonagents` — it will fail during the `prepare` step.
+Do not use `npm install -g github:arthuracrs/fonagents` — it will fail during the `prepare` step.
 
 ## Releasing
 
