@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "./api";
-import type { Stats, Status, IssueType } from "./types";
+import type { Stats, Status, IssueType, Gate } from "./types";
 import { IssueModel } from "./models/IssueModel";
 import { Sidebar, type View } from "./components/Sidebar";
 import { KanbanBoard } from "./components/KanbanBoard";
@@ -46,6 +46,7 @@ export default function App() {
   const [typeFilter, setTypeFilter] = useState<IssueType | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
+  const [gates, setGates] = useState<Gate[]>([]);
   const [initialized, setInitialized] = useState<boolean | null>(null);
   const [initializing, setInitializing] = useState(false);
 
@@ -91,6 +92,19 @@ export default function App() {
   useEffect(() => {
     api.initStatus().then(({ initialized }) => setInitialized(initialized));
   }, []);
+
+  useEffect(() => {
+    if (!initialized) return;
+    api.gates.list().then(setGates).catch(() => {});
+    const unsub = api.subscribeEvents((event) => {
+      if (event.type === "gate_opened") {
+        setGates((prev) => [...prev.filter((g) => g.id !== event.gate.id), event.gate]);
+      } else if (event.type === "gate_resolved") {
+        setGates((prev) => prev.filter((g) => g.id !== event.gateId));
+      }
+    });
+    return unsub;
+  }, [initialized]);
 
   useEffect(() => {
     if (initialized) {
@@ -266,7 +280,7 @@ export default function App() {
 
         {!NON_ISSUE_VIEWS.has(view) && !loading && !error && issues.length > 0 && (
           <div className="flex-1 overflow-hidden">
-            <KanbanBoard issues={issues} onSelect={setSelectedId} />
+            <KanbanBoard issues={issues} gates={gates} onSelect={setSelectedId} />
           </div>
         )}
       </main>
@@ -274,6 +288,7 @@ export default function App() {
       {selectedId && (
         <IssueDetail
           issueId={selectedId}
+          gates={gates.filter((g) => g.issueId === selectedId)}
           onClose={() => setSelectedId(null)}
           onUpdated={handleUpdated}
           onOpenExecution={(id) => setSelectedExecutionId(id)}

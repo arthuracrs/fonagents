@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { api } from "../api";
-import type { Status, IssueType, Comment } from "../types";
+import type { Status, IssueType, Comment, Gate } from "../types";
 import { IssueModel } from "../models/IssueModel";
 import { StatusBadge, TypeBadge, PriorityBadge } from "./Badge";
 import { TimeFormatter } from "../lib/TimeFormatter";
 
 interface Props {
   issue: IssueModel;
+  gates: Gate[];
   onUpdated: () => void;
   onClose: () => void;
 }
@@ -14,7 +15,7 @@ interface Props {
 const statuses: Status[] = ["open", "in_progress", "blocked", "deferred", "closed"];
 const types: IssueType[] = ["task", "bug", "feature", "epic", "chore"];
 
-export function IssueDetailView({ issue: initialIssue, onUpdated }: Props) {
+export function IssueDetailView({ issue: initialIssue, gates: propGates, onUpdated }: Props) {
   const [issue, setIssue] = useState<IssueModel>(initialIssue);
   const [comment, setComment] = useState("");
   const [commenting, setCommenting] = useState(false);
@@ -79,6 +80,20 @@ export function IssueDetailView({ issue: initialIssue, onUpdated }: Props) {
     try {
       const updated = await api.issues.reopen(issue.id);
       setIssue(IssueModel.from(updated));
+      onUpdated();
+    } catch (err: unknown) {
+      alert((err as Error).message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  const openGates = propGates.filter((g) => g.status === "open");
+
+  async function handleResolveGate(gateId: string) {
+    setActionLoading(true);
+    try {
+      await api.gates.resolve(gateId);
       onUpdated();
     } catch (err: unknown) {
       alert((err as Error).message);
@@ -196,6 +211,32 @@ export function IssueDetailView({ issue: initialIssue, onUpdated }: Props) {
                 <span className="text-[var(--accent)]">{dep.dep_type}</span>
                 {dep.title && <span className="text-[var(--text)] truncate">{dep.title}</span>}
                 {dep.status && <StatusBadge status={dep.status} />}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Gates */}
+      {openGates.length > 0 && (
+        <section className="mb-4">
+          <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">
+            ⏳ Waiting for Human
+          </h3>
+          <div className="space-y-2">
+            {openGates.map((gate) => (
+              <div key={gate.id} className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-3">
+                <p className="mb-2 whitespace-pre-wrap text-sm text-[var(--text)]">{gate.reason}</p>
+                <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                  <span>created {gate.createdAt}</span>
+                  <button
+                    onClick={() => handleResolveGate(gate.id)}
+                    disabled={actionLoading}
+                    className="ml-auto rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-[var(--bg)] hover:opacity-90 transition-opacity disabled:opacity-50"
+                  >
+                    Resolve
+                  </button>
+                </div>
               </div>
             ))}
           </div>

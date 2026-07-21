@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "../api";
+import type { Gate } from "../types";
 import { IssueModel } from "../models/IssueModel";
 import { IssueDetailView } from "./IssueDetailView";
 import { AgentsPanel } from "./AgentsPanel";
@@ -7,13 +8,14 @@ import { DependencyGraphView } from "./DependencyGraphView";
 
 interface Props {
   issueId: string;
+  gates: Gate[];
   onClose: () => void;
   onUpdated: () => void;
   onOpenExecution: (id: string) => void;
   onSelectIssue?: (id: string) => void;
 }
 
-export function IssueDetail({ issueId, onClose, onUpdated, onOpenExecution, onSelectIssue }: Props) {
+export function IssueDetail({ issueId, gates, onClose, onUpdated, onOpenExecution, onSelectIssue }: Props) {
   const [issue, setIssue] = useState<IssueModel | null>(null);
   const [activeTab, setActiveTab] = useState<string>("details");
   const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ export function IssueDetail({ issueId, onClose, onUpdated, onOpenExecution, onSe
         {/* Tab content */}
         <div className="p-4">
           {activeTab === "details" && (
-            <IssueDetailView issue={issue} onUpdated={onUpdated} onClose={onClose} />
+            <IssueDetailView issue={issue} gates={gates} onUpdated={onUpdated} onClose={onClose} />
           )}
           {activeTab === "agents" && (
             <AgentsPanel issue={issue} onOpenExecution={onOpenExecution} />

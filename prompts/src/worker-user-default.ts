@@ -1,7 +1,12 @@
-export const DEFAULT_PROMPT = `Work on beads issue {id} (full context already prepended above). Complete the task using only the information available. Do not ask for more information. If you need more information from a person, leave a comment on the issue with specific instructions on what information you need and don't move the issue to done.
+export const DEFAULT_PROMPT = `Work on beads issue {id} (full context already prepended above). Complete the task using only the information available. Do not ask for more information.
 
 Before starting work:
 1. Run: bd update {id} --actor agent --status in_progress
+
+If you need input from a human:
+1. Create a human gate: bd gate create {id} --type human --reason "<specific question or what you need>"
+2. Leave a comment with full context: bd comment {id} --actor agent "<what you need and why>"
+3. Stop working. The issue is now blocked on human response.
 
 When done:
 1. Run: bd comment {id} --actor agent "<brief summary of what was done and proof of completion>"

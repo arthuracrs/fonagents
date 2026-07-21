@@ -1,9 +1,10 @@
 import type { IssueModel } from "../models/IssueModel";
-import type { Status } from "../types";
+import type { Status, Gate } from "../types";
 import { TypeBadge, PriorityBadge } from "./Badge";
 
 interface Props {
   issues: IssueModel[];
+  gates: Gate[];
   onSelect: (id: string) => void;
 }
 
@@ -15,18 +16,23 @@ const COLUMNS: { status: Status; label: string; icon: string; color: string }[] 
   { status: "closed",      label: "Closed",       icon: "✓", color: "text-[var(--text-muted)]" },
 ];
 
-function KanbanCard({ issue, onSelect }: { issue: IssueModel; onSelect: () => void }) {
+function KanbanCard({ issue, gated, onSelect }: { issue: IssueModel; gated: boolean; onSelect: () => void }) {
   return (
     <button
       onClick={onSelect}
-      className="group w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-left hover:border-[var(--accent)]/40 hover:bg-[var(--surface2)] transition-all"
+      className={`group w-full rounded-lg border p-3 text-left transition-all ${
+        gated
+          ? "border-[var(--accent)]/40 bg-[var(--accent)]/5 hover:border-[var(--accent)]/60 hover:bg-[var(--accent)]/10"
+          : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)]/40 hover:bg-[var(--surface2)]"
+      }`}
     >
       <div className="mb-2 flex items-center gap-1.5 flex-wrap">
         <PriorityBadge priority={issue.priority} />
         <TypeBadge type={issue.type} />
+        {gated && <span className="rounded border border-[var(--accent)]/30 bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] text-[var(--accent)]">⏳ gate</span>}
       </div>
 
-      <p className={`text-sm font-medium leading-snug ${issue.isClosed() ? "text-[var(--text-muted)] line-through" : "text-[var(--text)]"}`}>
+      <p className={`text-sm font-medium leading-snug ${issue.isClosed() ? "text-[var(--text-muted)] line-through" : gated ? "text-[var(--accent)]" : "text-[var(--text)]"}`}>
         {issue.title}
       </p>
 
@@ -41,7 +47,7 @@ function KanbanCard({ issue, onSelect }: { issue: IssueModel; onSelect: () => vo
   );
 }
 
-export function KanbanBoard({ issues, onSelect }: Props) {
+export function KanbanBoard({ issues, gates, onSelect }: Props) {
   const grouped = Object.fromEntries(
     COLUMNS.map((col) => [col.status, issues.filter((i) => i.status === col.status)])
   ) as Record<Status, IssueModel[]>;
@@ -74,6 +80,7 @@ export function KanbanBoard({ issues, onSelect }: Props) {
                 <KanbanCard
                   key={issue.id}
                   issue={issue}
+                  gated={gates.some((g) => g.issueId === issue.id && g.status === "open")}
                   onSelect={() => onSelect(issue.id)}
                 />
               ))}
