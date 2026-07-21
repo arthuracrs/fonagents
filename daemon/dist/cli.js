@@ -25845,6 +25845,7 @@ function writeAgentFile(projectDir, prompt) {
   const content = `---
 description: fonagents Manager \u2014 coordinates AI development through beads
 mode: primary
+model: glm-5.2
 permission:
   task: allow
   webfetch: allow
