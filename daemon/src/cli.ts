@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { startDaemon, stopDaemon, daemonStatePath, globalRegistryPath } from './daemon.js'
-import { MANAGER_PROMPT } from './manager-prompt.js'
+import { MANAGER_PROMPT, INITIAL_PROMPT } from '@fonagents/prompts'
 import { spawn } from 'child_process'
 import { exec } from 'child_process'
 import fs from 'fs'
@@ -46,7 +46,7 @@ function writeAgentFile(projectDir: string, prompt: string): void {
   const content = `---
 description: fonagents Manager — coordinates AI development through beads
 mode: primary
-model: glm-5.2
+model: opencode-go/mimo-v2.5-pro
 permission:
   task: allow
   webfetch: allow
@@ -227,9 +227,7 @@ async function runDaemon(): Promise<void> {
   const managerPrompt = MANAGER_PROMPT.replace(/PORT/g, String(handle.port))
   writeAgentFile(projectDir, managerPrompt)
 
-  const initialPrompt = 'Review the current beads and project state, then ask if the user wants to start working on ready issues.'
-
-  const agentProc = launchAgent(runtimeId, initialPrompt, handle.mcpConfigPath, projectDir, managerPrompt)
+  const agentProc = launchAgent(runtimeId, INITIAL_PROMPT, handle.mcpConfigPath, projectDir, managerPrompt)
 
   const onSigTerm = () => { agentProc.kill('SIGTERM') }
   process.on('SIGTERM', onSigTerm)

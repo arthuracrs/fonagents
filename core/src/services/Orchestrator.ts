@@ -20,6 +20,7 @@ import type {
 } from '../ports/AgentRuntimePort.js'
 import type { IssueCreateInput, IssueFilter, IssueTrackerPort, IssueUpdatePatch } from '../ports/IssueTrackerPort.js'
 import type { ManagerToolsPort } from '../ports/ManagerToolsPort.js'
+import { buildWorkerSystemPrompt } from '@fonagents/prompts'
 import type { UiCommandPort } from '../ports/UiCommandPort.js'
 import type { UiEvent, UiEventPort } from '../ports/UiEventPort.js'
 
@@ -113,7 +114,7 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
       issueId: input.issueId,
       runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
       prompt: input.prompt ?? `Resolve ${input.issueId}: ${issue.title}`,
-      systemPrompt: `You are a worker agent executing beads issue ${input.issueId}.\n\n${issue.description}`,
+      systemPrompt: buildWorkerSystemPrompt(input.issueId, issue.description ?? ''),
       mode: 'tmux',
       cwd: this.config.projectDir,
     }

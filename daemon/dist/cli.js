@@ -151,12 +151,144 @@ var require_ManagerToolsPort = __commonJS({
   }
 });
 
+// ../prompts/dist/manager-system.js
+var require_manager_system = __commonJS({
+  "../prompts/dist/manager-system.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.MANAGER_PROMPT = void 0;
+    exports2.MANAGER_PROMPT = `You are the fonagents Manager. You coordinate AI-assisted development by breaking down work, dispatching agents, and tracking progress through beads.
+
+Available MCP tools (fonagents):
+
+tool  | decompose
+---   | ---
+input | formulaName (string, required), vars (object, optional)
+desc  | Decompose a request into a swarm molecule of child issues using a beads formula.
+
+tool  | dispatchWorker
+---   | ---
+input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
+desc  | Dispatch a one-shot coding agent onto a ready child issue.
+
+tool  | listReady
+---   | ---
+input | moleculeId (string, optional)
+desc  | List claimable/ready work, optionally scoped to a molecule.
+
+tool  | workerStatus
+---   | ---
+input | workerId (string, optional), issueId (string, optional)
+desc  | Inspect worker progress by worker id or issue id.
+
+tool  | escalate
+---   | ---
+input | reason (string, required), issueId (string, optional)
+desc  | Escalate to the human operator. Creates a human gate and blocks until resolved via the UI.
+
+tool  | recordProgress
+---   | ---
+input | issueId (string, required), body (string, required)
+desc  | Record a progress comment on an issue (audit trail).
+
+tool  | completeIssue
+---   | ---
+input | issueId (string, required), reason (string, optional)
+desc  | Mark an issue as complete.
+
+Workflow:
+1. When the user gives a high-level request, use \`decompose\` to break it into issues with a beads formula.
+2. Use \`listReady\` to see available work.
+3. Dispatch \`dispatchWorker\` to assign issues to coding agents.
+4. Monitor progress with \`workerStatus\`.
+5. Record updates with \`recordProgress\`.
+6. Mark completed issues with \`completeIssue\`.
+7. Use \`escalate\` when you need human input or approval.
+
+Rules:
+- NEVER execute issues yourself. You are a manager, not a worker. Always use \`dispatchWorker\` to assign work to a coding agent.
+- Do not write code, run commands, or edit files directly. Your job is to decompose, dispatch, monitor, and coordinate.
+- If there is ready work, dispatch workers immediately. Do not wait or ask \u2014 just dispatch.
+
+The web dashboard at http://localhost:PORT provides visualization and monitoring.`;
+  }
+});
+
+// ../prompts/dist/worker-user-default.js
+var require_worker_user_default = __commonJS({
+  "../prompts/dist/worker-user-default.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.DEFAULT_PROMPT = void 0;
+    exports2.DEFAULT_PROMPT = `Work on beads issue {id} (full context already prepended above). Complete the task using only the information available. Do not ask for more information. If you need more information from a person, leave a comment on the issue with specific instructions on what information you need and don't move the issue to done.
+
+Before starting work:
+1. Run: bd update {id} --actor agent --status in_progress
+
+When done:
+1. Run: bd comment {id} --actor agent "<brief summary of what was done and proof of completion>"
+2. Leave the issue open for review unless the user ask you to close.
+
+Important: write comments in plain text only \u2014 no Markdown syntax (no **bold**, \`code\`, \`\`\`, -, etc.). Use line breaks, spacing, and indentation to make them readable for humans.`;
+  }
+});
+
+// ../prompts/dist/worker-system.js
+var require_worker_system = __commonJS({
+  "../prompts/dist/worker-system.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.buildWorkerSystemPrompt = buildWorkerSystemPrompt;
+    function buildWorkerSystemPrompt(issueId, description) {
+      return `You are a worker agent executing beads issue ${issueId}.
+
+${description}`;
+    }
+  }
+});
+
+// ../prompts/dist/manager-initial.js
+var require_manager_initial = __commonJS({
+  "../prompts/dist/manager-initial.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.INITIAL_PROMPT = void 0;
+    exports2.INITIAL_PROMPT = "Review the current beads and project state, then ask if the user wants to start working on ready issues.";
+  }
+});
+
+// ../prompts/dist/index.js
+var require_dist = __commonJS({
+  "../prompts/dist/index.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.INITIAL_PROMPT = exports2.buildWorkerSystemPrompt = exports2.DEFAULT_PROMPT = exports2.MANAGER_PROMPT = void 0;
+    var manager_system_js_1 = require_manager_system();
+    Object.defineProperty(exports2, "MANAGER_PROMPT", { enumerable: true, get: function() {
+      return manager_system_js_1.MANAGER_PROMPT;
+    } });
+    var worker_user_default_js_1 = require_worker_user_default();
+    Object.defineProperty(exports2, "DEFAULT_PROMPT", { enumerable: true, get: function() {
+      return worker_user_default_js_1.DEFAULT_PROMPT;
+    } });
+    var worker_system_js_1 = require_worker_system();
+    Object.defineProperty(exports2, "buildWorkerSystemPrompt", { enumerable: true, get: function() {
+      return worker_system_js_1.buildWorkerSystemPrompt;
+    } });
+    var manager_initial_js_1 = require_manager_initial();
+    Object.defineProperty(exports2, "INITIAL_PROMPT", { enumerable: true, get: function() {
+      return manager_initial_js_1.INITIAL_PROMPT;
+    } });
+  }
+});
+
 // ../core/dist/services/Orchestrator.js
 var require_Orchestrator = __commonJS({
   "../core/dist/services/Orchestrator.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Orchestrator = void 0;
+    var prompts_1 = require_dist();
     var DEFAULT_MANAGER_RUNTIME = "opencode";
     var Orchestrator2 = class {
       tracker;
@@ -261,9 +393,7 @@ var require_Orchestrator = __commonJS({
           issueId: input.issueId,
           runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
           prompt: input.prompt ?? `Resolve ${input.issueId}: ${issue.title}`,
-          systemPrompt: `You are a worker agent executing beads issue ${input.issueId}.
-
-${issue.description}`,
+          systemPrompt: (0, prompts_1.buildWorkerSystemPrompt)(input.issueId, issue.description ?? ""),
           mode: "tmux",
           cwd: this.config.projectDir
         };
@@ -341,7 +471,7 @@ ${issue.description}`,
 });
 
 // ../core/dist/index.js
-var require_dist = __commonJS({
+var require_dist2 = __commonJS({
   "../core/dist/index.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
@@ -745,7 +875,7 @@ var require_BeadsAdapter = __commonJS({
 });
 
 // ../adapters/beads/dist/index.js
-var require_dist2 = __commonJS({
+var require_dist3 = __commonJS({
   "../adapters/beads/dist/index.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
@@ -1025,7 +1155,7 @@ var require_AnagentAdapter = __commonJS({
 });
 
 // ../adapters/anagent/dist/index.js
-var require_dist3 = __commonJS({
+var require_dist4 = __commonJS({
   "../adapters/anagent/dist/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -6648,7 +6778,7 @@ var require_on_finished = __commonJS({
 });
 
 // ../node_modules/type-is/node_modules/content-type/dist/index.js
-var require_dist4 = __commonJS({
+var require_dist5 = __commonJS({
   "../node_modules/type-is/node_modules/content-type/dist/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -16357,7 +16487,7 @@ var require_media_typer = __commonJS({
 var require_type_is = __commonJS({
   "../node_modules/type-is/index.js"(exports2, module2) {
     "use strict";
-    var contentType = require_dist4();
+    var contentType = require_dist5();
     var mime = require_mime_types();
     var typer = require_media_typer();
     module2.exports = typeofrequest;
@@ -16445,7 +16575,7 @@ var require_type_is = __commonJS({
 });
 
 // ../node_modules/body-parser/node_modules/content-type/dist/index.js
-var require_dist5 = __commonJS({
+var require_dist6 = __commonJS({
   "../node_modules/body-parser/node_modules/content-type/dist/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -16580,7 +16710,7 @@ var require_utils = __commonJS({
   "../node_modules/body-parser/lib/utils.js"(exports2, module2) {
     "use strict";
     var bytes = require_bytes();
-    var contentType = require_dist5();
+    var contentType = require_dist6();
     var typeis = require_type_is();
     module2.exports = {
       getCharset,
@@ -21187,7 +21317,7 @@ var require_is_promise = __commonJS({
 });
 
 // ../node_modules/path-to-regexp/dist/index.js
-var require_dist6 = __commonJS({
+var require_dist7 = __commonJS({
   "../node_modules/path-to-regexp/dist/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -21560,7 +21690,7 @@ var require_layer = __commonJS({
   "../node_modules/router/lib/layer.js"(exports2, module2) {
     "use strict";
     var isPromise = require_is_promise();
-    var pathRegexp = require_dist6();
+    var pathRegexp = require_dist7();
     var debug = require_src()("router:layer");
     var deprecate = require_depd()("router");
     var TRAILING_SLASH_REGEXP = /\/+$/;
@@ -25562,7 +25692,7 @@ var require_McpConfigWriter = __commonJS({
 });
 
 // ../adapters/http-sse/dist/index.js
-var require_dist7 = __commonJS({
+var require_dist8 = __commonJS({
   "../adapters/http-sse/dist/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -25583,10 +25713,10 @@ var require_dist7 = __commonJS({
 });
 
 // src/daemon.ts
-var import_core = __toESM(require_dist());
-var import_beads_adapter = __toESM(require_dist2());
-var import_anagent_adapter = __toESM(require_dist3());
-var import_http_sse_adapter = __toESM(require_dist7());
+var import_core = __toESM(require_dist2());
+var import_beads_adapter = __toESM(require_dist3());
+var import_anagent_adapter = __toESM(require_dist4());
+var import_http_sse_adapter = __toESM(require_dist8());
 var import_express = __toESM(require_express2());
 var import_path = __toESM(require("path"));
 var import_fs = __toESM(require("fs"));
@@ -25754,63 +25884,8 @@ function stopDaemon() {
   }
 }
 
-// src/manager-prompt.ts
-var MANAGER_PROMPT = `You are the fonagents Manager. You coordinate AI-assisted development by breaking down work, dispatching agents, and tracking progress through beads.
-
-Available MCP tools (fonagents):
-
-tool  | decompose
----   | ---
-input | formulaName (string, required), vars (object, optional)
-desc  | Decompose a request into a swarm molecule of child issues using a beads formula.
-
-tool  | dispatchWorker
----   | ---
-input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
-desc  | Dispatch a one-shot coding agent onto a ready child issue.
-
-tool  | listReady
----   | ---
-input | moleculeId (string, optional)
-desc  | List claimable/ready work, optionally scoped to a molecule.
-
-tool  | workerStatus
----   | ---
-input | workerId (string, optional), issueId (string, optional)
-desc  | Inspect worker progress by worker id or issue id.
-
-tool  | escalate
----   | ---
-input | reason (string, required), issueId (string, optional)
-desc  | Escalate to the human operator. Creates a human gate and blocks until resolved via the UI.
-
-tool  | recordProgress
----   | ---
-input | issueId (string, required), body (string, required)
-desc  | Record a progress comment on an issue (audit trail).
-
-tool  | completeIssue
----   | ---
-input | issueId (string, required), reason (string, optional)
-desc  | Mark an issue as complete.
-
-Workflow:
-1. When the user gives a high-level request, use \`decompose\` to break it into issues with a beads formula.
-2. Use \`listReady\` to see available work.
-3. Dispatch \`dispatchWorker\` to assign issues to coding agents.
-4. Monitor progress with \`workerStatus\`.
-5. Record updates with \`recordProgress\`.
-6. Mark completed issues with \`completeIssue\`.
-7. Use \`escalate\` when you need human input or approval.
-
-Rules:
-- NEVER execute issues yourself. You are a manager, not a worker. Always use \`dispatchWorker\` to assign work to a coding agent.
-- Do not write code, run commands, or edit files directly. Your job is to decompose, dispatch, monitor, and coordinate.
-- If there is ready work, dispatch workers immediately. Do not wait or ask \u2014 just dispatch.
-
-The web dashboard at http://localhost:PORT provides visualization and monitoring.`;
-
 // src/cli.ts
+var import_prompts = __toESM(require_dist());
 var import_child_process = require("child_process");
 var import_child_process2 = require("child_process");
 var import_fs2 = __toESM(require("fs"));
@@ -25847,7 +25922,7 @@ function writeAgentFile(projectDir, prompt) {
   const content = `---
 description: fonagents Manager \u2014 coordinates AI development through beads
 mode: primary
-model: glm-5.2
+model: opencode-go/mimo-v2.5-pro
 permission:
   task: allow
   webfetch: allow
@@ -26011,10 +26086,9 @@ async function runDaemon() {
 Manager mode \u2014 starting ${runtimeId} agent...`);
   console.log(`Daemon: ${daemonUrl}  |  Project: ${projectDir}
 `);
-  const managerPrompt = MANAGER_PROMPT.replace(/PORT/g, String(handle.port));
+  const managerPrompt = import_prompts.MANAGER_PROMPT.replace(/PORT/g, String(handle.port));
   writeAgentFile(projectDir, managerPrompt);
-  const initialPrompt = "Review the current beads and project state, then ask if the user wants to start working on ready issues.";
-  const agentProc = launchAgent(runtimeId, initialPrompt, handle.mcpConfigPath, projectDir, managerPrompt);
+  const agentProc = launchAgent(runtimeId, import_prompts.INITIAL_PROMPT, handle.mcpConfigPath, projectDir, managerPrompt);
   const onSigTerm = () => {
     agentProc.kill("SIGTERM");
   };

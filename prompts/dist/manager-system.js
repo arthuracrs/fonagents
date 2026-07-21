@@ -55,4 +55,4 @@ Rules:
 - If there is ready work, dispatch workers immediately. Do not wait or ask — just dispatch.
 
 The web dashboard at http://localhost:PORT provides visualization and monitoring.`;
-//# sourceMappingURL=manager-prompt.js.map
+//# sourceMappingURL=manager-system.js.map
