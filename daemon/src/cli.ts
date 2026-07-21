@@ -257,7 +257,7 @@ function launchAgent(
     default:
       return spawn('opencode', [
         '--agent', 'fonagents-manager',
-        initialPrompt,
+        '--prompt', initialPrompt,
       ], { stdio: 'inherit', cwd: projectDir })
   }
 }
