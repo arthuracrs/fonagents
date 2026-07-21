@@ -40,7 +40,7 @@ reference another workspace package, copy the files.
 ## anagent is external
 
 `anagent/` is a clone of the standalone repo (`arthuracrs/anagent`). It is pulled
-in at deploy time by `deploy.sh` — it is NOT developed inside fonagents.
+in at predeploy time by `predeploy.sh` — it is NOT developed inside fonagents.
 
 **Do not modify anagent code inside fonagents.** Any changes made here will be
 overwritten on the next deploy (the script re-clones from the anagent repo).
@@ -48,15 +48,15 @@ overwritten on the next deploy (the script re-clones from the anagent repo).
 If anagent needs changes (new flags, runtime support, bug fixes):
 1. Describe the needed change as a suggestion (issue, PR, or task comment).
 2. Another person or agent implements it in the `arthuracrs/anagent` repo.
-3. Once merged, `deploy.sh` pulls the updated version into fonagents.
+3. Once merged, `predeploy.sh` pulls the updated version into fonagents.
 
-## Deploy
+## Predeploy
 
-Run `deploy.sh` before pushing fonagents. It clones the latest anagent from its
+Run `predeploy.sh` before pushing fonagents. It clones the latest anagent from its
 own repo (without `.git`), rebuilds everything, and stages the result.
 
 ```bash
-./deploy.sh
+./predeploy.sh
 git add -A
 git commit -m "..."
 git push
