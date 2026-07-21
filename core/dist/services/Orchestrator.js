@@ -72,7 +72,7 @@ class Orchestrator {
             runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
             prompt: input.prompt ?? `Resolve ${input.issueId}: ${issue.title}`,
             systemPrompt: `You are a worker agent executing beads issue ${input.issueId}.\n\n${issue.description}`,
-            mode: 'headless',
+            mode: 'tmux',
             cwd: this.config.projectDir,
         };
         const worker = await this.runtime.spawnWorker(spawnInput);

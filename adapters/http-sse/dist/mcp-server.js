@@ -264,7 +264,7 @@ var require_Orchestrator = __commonJS({
           systemPrompt: `You are a worker agent executing beads issue ${input.issueId}.
 
 ${issue.description}`,
-          mode: "headless",
+          mode: "tmux",
           cwd: this.config.projectDir
         };
         const worker = await this.runtime.spawnWorker(spawnInput);
