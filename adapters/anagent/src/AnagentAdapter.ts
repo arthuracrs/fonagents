@@ -91,6 +91,7 @@ export class AnagentAdapter implements AgentRuntimePort {
     const proc = spawn(this.bin, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
       cwd: input.cwd ?? this.cwd,
+      env: { ...process.env, BEADS_ACTOR: `worker-${id}` },
     })
     handle.process = proc
 

@@ -76,6 +76,7 @@ class AnagentAdapter {
         const proc = (0, child_process_1.spawn)(this.bin, args, {
             stdio: ['ignore', 'pipe', 'pipe'],
             cwd: input.cwd ?? this.cwd,
+            env: { ...process.env, BEADS_ACTOR: `worker-${id}` },
         });
         handle.process = proc;
         this.pipeEvents(id, proc);
