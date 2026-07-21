@@ -129,8 +129,8 @@ export class BeadsAdapter implements IssueTrackerPort {
 
   // ── Comments ────────────────────────────────────────────────────────────────
 
-  async addComment(id: IssueId, body: string): Promise<Comment> {
-    const raw = await this.run(['comment', id, body, '--json'])
+  async addComment(id: IssueId, body: string, actor?: string): Promise<Comment> {
+    const raw = await this.run(['comment', id, body, '--json'], actor)
     return mapComment(JSON.parse(raw), id)
   }
 
@@ -257,8 +257,9 @@ export class BeadsAdapter implements IssueTrackerPort {
 
   // ── Internals ────────────────────────────────────────────────────────────────
 
-  private async run(args: string[]): Promise<string> {
-    const finalArgs = this.actor ? ['--actor', this.actor, ...args] : args
+  private async run(args: string[], actorOverride?: string): Promise<string> {
+    const actor = actorOverride ?? this.actor
+    const finalArgs = actor ? ['--actor', actor, ...args] : args
     const { stdout } = await execFileAsync(this.bin, finalArgs, {
       cwd: this.projectDir,
       maxBuffer: 10 * 1024 * 1024,

@@ -26,7 +26,7 @@ export interface IssueTrackerPort {
   claimIssue(id: IssueId): Promise<Issue>
 
   // ── Comments ────────────────────────────────────────────────────────────────
-  addComment(id: IssueId, body: string): Promise<Comment>
+  addComment(id: IssueId, body: string, actor?: string): Promise<Comment>
   listComments(id: IssueId): Promise<Comment[]>
 
   // ── Dependencies & hierarchy ─────────────────────────────────────────────────

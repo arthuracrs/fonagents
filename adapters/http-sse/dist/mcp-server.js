@@ -239,7 +239,7 @@ var require_Orchestrator = __commonJS({
         return this.tracker.claimIssue(id);
       }
       addComment(issueId, body) {
-        return this.tracker.addComment(issueId, body);
+        return this.tracker.addComment(issueId, body, "Human");
       }
       addDependency(childId, parentId, type) {
         return this.tracker.addDependency(childId, parentId, type);
@@ -309,7 +309,7 @@ ${issue.description}`,
         return { gateId: gate.id };
       }
       async recordProgress(input) {
-        await this.tracker.addComment(input.issueId, input.body);
+        await this.tracker.addComment(input.issueId, input.body, "fonagents-manager");
         this.emit({ type: "issue_changed", issueId: input.issueId, change: "commented" });
       }
       async completeIssue(input) {

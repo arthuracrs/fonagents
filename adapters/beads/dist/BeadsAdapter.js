@@ -104,8 +104,8 @@ class BeadsAdapter {
         return (0, mapper_js_1.mapIssue)(Array.isArray(parsed) ? parsed[0] : parsed);
     }
     // ── Comments ────────────────────────────────────────────────────────────────
-    async addComment(id, body) {
-        const raw = await this.run(['comment', id, body, '--json']);
+    async addComment(id, body, actor) {
+        const raw = await this.run(['comment', id, body, '--json'], actor);
         return (0, mapper_js_1.mapComment)(JSON.parse(raw), id);
     }
     async listComments(id) {
@@ -216,8 +216,9 @@ class BeadsAdapter {
         await this.run(args);
     }
     // ── Internals ────────────────────────────────────────────────────────────────
-    async run(args) {
-        const finalArgs = this.actor ? ['--actor', this.actor, ...args] : args;
+    async run(args, actorOverride) {
+        const actor = actorOverride ?? this.actor;
+        const finalArgs = actor ? ['--actor', actor, ...args] : args;
         const { stdout } = await execFileAsync(this.bin, finalArgs, {
             cwd: this.projectDir,
             maxBuffer: 10 * 1024 * 1024,

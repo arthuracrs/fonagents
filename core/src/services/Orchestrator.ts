@@ -82,7 +82,7 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
   closeIssue(id: IssueId, reason?: string): Promise<Issue> { return this.tracker.closeIssue(id, reason) }
   reopenIssue(id: IssueId): Promise<Issue> { return this.tracker.reopenIssue(id) }
   claimIssue(id: IssueId): Promise<Issue> { return this.tracker.claimIssue(id) }
-  addComment(issueId: IssueId, body: string): Promise<Comment> { return this.tracker.addComment(issueId, body) }
+  addComment(issueId: IssueId, body: string): Promise<Comment> { return this.tracker.addComment(issueId, body, 'Human') }
   addDependency(childId: IssueId, parentId: IssueId, type?: string): Promise<void> {
     return this.tracker.addDependency(childId, parentId, type)
   }
@@ -164,7 +164,7 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
   }
 
   async recordProgress(input: { issueId: IssueId; body: string }): Promise<void> {
-    await this.tracker.addComment(input.issueId, input.body)
+    await this.tracker.addComment(input.issueId, input.body, 'fonagents-manager')
     this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'commented' })
   }
 

@@ -239,7 +239,7 @@ var require_Orchestrator = __commonJS({
         return this.tracker.claimIssue(id);
       }
       addComment(issueId, body) {
-        return this.tracker.addComment(issueId, body);
+        return this.tracker.addComment(issueId, body, "Human");
       }
       addDependency(childId, parentId, type) {
         return this.tracker.addDependency(childId, parentId, type);
@@ -309,7 +309,7 @@ ${issue.description}`,
         return { gateId: gate.id };
       }
       async recordProgress(input) {
-        await this.tracker.addComment(input.issueId, input.body);
+        await this.tracker.addComment(input.issueId, input.body, "fonagents-manager");
         this.emit({ type: "issue_changed", issueId: input.issueId, change: "commented" });
       }
       async completeIssue(input) {
@@ -585,8 +585,8 @@ var require_BeadsAdapter = __commonJS({
         return (0, mapper_js_1.mapIssue)(Array.isArray(parsed) ? parsed[0] : parsed);
       }
       // ── Comments ────────────────────────────────────────────────────────────────
-      async addComment(id, body) {
-        const raw = await this.run(["comment", id, body, "--json"]);
+      async addComment(id, body, actor) {
+        const raw = await this.run(["comment", id, body, "--json"], actor);
         return (0, mapper_js_1.mapComment)(JSON.parse(raw), id);
       }
       async listComments(id) {
@@ -692,8 +692,9 @@ var require_BeadsAdapter = __commonJS({
         await this.run(args);
       }
       // ── Internals ────────────────────────────────────────────────────────────────
-      async run(args) {
-        const finalArgs = this.actor ? ["--actor", this.actor, ...args] : args;
+      async run(args, actorOverride) {
+        const actor = actorOverride ?? this.actor;
+        const finalArgs = actor ? ["--actor", actor, ...args] : args;
         const { stdout } = await execFileAsync(this.bin, finalArgs, {
           cwd: this.projectDir,
           maxBuffer: 10 * 1024 * 1024
@@ -25696,7 +25697,7 @@ async function startDaemon(opts = {}) {
   const tracker = new import_beads_adapter.BeadsAdapter({
     bdPath: opts.bdPath ?? process.env.BD_PATH,
     projectDir,
-    actor: process.env.BEADS_ACTOR ?? "fonagents-manager"
+    actor: process.env.BEADS_ACTOR
   });
   const runtime = new import_anagent_adapter.AnagentAdapter({
     anagentPath: opts.anagentPath ?? process.env.ANAGENT_PATH,
