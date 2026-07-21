@@ -48,7 +48,7 @@ interface AnagentFailedEvent {
   output?: string
 }
 
-type AnagentEvent =
+export type AnagentEvent =
   | AnagentStartEvent
   | AnagentTextEvent
   | AnagentToolUseEvent

@@ -18,6 +18,7 @@ export interface AgentRuntimePort {
   subscribeWorker(workerId: WorkerId, cb: (event: AgentStreamEvent) => void): { unsubscribe(): void }
   getWorker(workerId: WorkerId): WorkerHandle | undefined
   getWorkersForIssue(issueId: IssueId): WorkerHandle[]
+  listWorkers(): WorkerHandle[]
 }
 
 export interface SpawnWorkerInput {

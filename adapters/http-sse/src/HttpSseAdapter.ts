@@ -244,6 +244,10 @@ export function createHttpSseApp(
   }))
 
   // ── Workers & runtimes ──────────────────────────────────────────────────────
+  app.get('/api/workers', wrap(async (_req, res) => {
+    res.json(await command.listWorkers())
+  }))
+
   app.get('/api/workers/:id', wrap(async (req, res) => {
     const worker = await command.getWorkerStatus(param(req, "id"))
     if (!worker) { res.status(404).json({ error: 'Not found' }); return }

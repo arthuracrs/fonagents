@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'child_process'
+import { spawn, execFile, type ChildProcess } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import type {
@@ -11,7 +11,7 @@ import type {
   WorkerHandle,
   WorkerId,
 } from '@fonagents/core'
-import { translateEvent, parseNdjsonLine } from './protocol.js'
+import { translateEvent, parseNdjsonLine, type AnagentEvent } from './protocol.js'
 
 export interface AnagentAdapterConfig {
   anagentPath?: string
@@ -136,6 +136,9 @@ export class AnagentAdapter implements AgentRuntimePort {
       worker.status = 'cancelled'
       worker.finishedAt = new Date().toISOString()
     }
+    if (worker.tmuxSession) {
+      killTmuxSession(worker.tmuxSession).catch(() => {})
+    }
     return Promise.resolve(true)
   }
 
@@ -156,6 +159,10 @@ export class AnagentAdapter implements AgentRuntimePort {
       .map((w) => ({ ...w }))
   }
 
+  listWorkers(): WorkerHandle[] {
+    return Array.from(this.workers.values()).map((w) => ({ ...w }))
+  }
+
   // ── Internals ────────────────────────────────────────────────────────────────
 
   private pipeEvents(workerId: WorkerId, proc: ChildProcess): void {
@@ -167,6 +174,10 @@ export class AnagentAdapter implements AgentRuntimePort {
       for (const line of lines) {
         const raw = parseNdjsonLine(line)
         if (!raw) continue
+        if (raw.type === 'start' && raw.tmuxSession) {
+          const worker = this.workers.get(workerId)
+          if (worker) worker.tmuxSession = raw.tmuxSession
+        }
         const translated = translateEvent(raw)
         if (translated) this.notify(workerId, translated)
       }
@@ -202,4 +213,12 @@ function resolveAnagent(override?: string): { bin: string; prefixArgs: string[] 
 
 function genId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+}
+
+async function killTmuxSession(session: string): Promise<void> {
+  try {
+    await new Promise<void>((resolve, reject) => {
+      execFile('tmux', ['kill-session', '-t', session], (err) => err ? reject(err) : resolve())
+    })
+  } catch { /* ok */ }
 }

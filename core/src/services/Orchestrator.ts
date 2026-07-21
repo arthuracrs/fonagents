@@ -66,6 +66,9 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
   getWorkerStatus(workerId: WorkerId): Promise<WorkerHandle | undefined> {
     return Promise.resolve(this.runtime.getWorker(workerId))
   }
+  listWorkers(): Promise<WorkerHandle[]> {
+    return Promise.resolve(this.runtime.listWorkers())
+  }
   listRuntimes(): Promise<RuntimeInfo[]> { return this.runtime.listRuntimes() }
   listComments(issueId: IssueId): Promise<Comment[]> { return this.tracker.listComments(issueId) }
   listDependencies(issueId: IssueId): Promise<Dependency[]> { return this.tracker.listDependencies(issueId) }

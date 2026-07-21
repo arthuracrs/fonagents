@@ -8,6 +8,7 @@ export interface AgentRuntimePort {
     };
     getWorker(workerId: WorkerId): WorkerHandle | undefined;
     getWorkersForIssue(issueId: IssueId): WorkerHandle[];
+    listWorkers(): WorkerHandle[];
 }
 export interface SpawnWorkerInput {
     issueId: IssueId;

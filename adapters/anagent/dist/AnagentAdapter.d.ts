@@ -18,6 +18,7 @@ export declare class AnagentAdapter implements AgentRuntimePort {
     };
     getWorker(workerId: WorkerId): WorkerHandle | undefined;
     getWorkersForIssue(issueId: IssueId): WorkerHandle[];
+    listWorkers(): WorkerHandle[];
     private pipeEvents;
     private notify;
 }

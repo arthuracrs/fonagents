@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.daemonStatePath = daemonStatePath;
 exports.startDaemon = startDaemon;
 exports.stopDaemon = stopDaemon;
 const core_1 = require("@fonagents/core");
@@ -13,8 +14,24 @@ const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 let _server = null;
+let _projectDir = null;
+function daemonStatePath(projectDir) {
+    return path_1.default.join(projectDir, '.fonagents', 'daemon.json');
+}
+function writeStateFile(projectDir, port) {
+    const statePath = daemonStatePath(projectDir);
+    fs_1.default.mkdirSync(path_1.default.dirname(statePath), { recursive: true });
+    fs_1.default.writeFileSync(statePath, JSON.stringify({ port, projectDir, pid: process.pid }, null, 2), 'utf8');
+}
+function removeStateFile(projectDir) {
+    try {
+        fs_1.default.unlinkSync(daemonStatePath(projectDir));
+    }
+    catch { /* ok */ }
+}
 function startDaemon(opts = {}) {
     const projectDir = opts.projectDir ?? process.env.PROJECT_DIR ?? process.cwd();
+    _projectDir = projectDir;
     const port = opts.port ?? parseInt(process.env.PORT ?? '3001', 10);
     const eventBus = new http_sse_adapter_1.SseEventBus();
     const managerRuntime = opts.managerRuntimeId ?? process.env.MANAGER_RUNTIME ?? 'opencode';
@@ -80,6 +97,7 @@ function startDaemon(opts = {}) {
             const server = app.listen(port, () => {
                 const actualPort = server.address().port;
                 _server = server;
+                writeStateFile(projectDir, actualPort);
                 console.log(`fonagents daemon: http://localhost:${actualPort}`);
                 console.log(`Project:          ${projectDir}`);
                 console.log(`MCP config:       ${mcpConfigPath}`);
@@ -97,6 +115,10 @@ function stopDaemon() {
         const s = _server;
         _server = null;
         s.close(() => { });
+    }
+    if (_projectDir) {
+        removeStateFile(_projectDir);
+        _projectDir = null;
     }
 }
 //# sourceMappingURL=daemon.js.map

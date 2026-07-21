@@ -28,5 +28,8 @@ beads-ui/.beads/*.db
 *.tmp
 *.log
 
+# Runtime state
+.fonagents/
+
 # NOTE: dist/ directories ARE committed — the archive URL install ships
 # prebuilt files. Run `npm run build` before committing.

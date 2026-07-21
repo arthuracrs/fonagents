@@ -116,6 +116,9 @@ class AnagentAdapter {
             worker.status = 'cancelled';
             worker.finishedAt = new Date().toISOString();
         }
+        if (worker.tmuxSession) {
+            killTmuxSession(worker.tmuxSession).catch(() => { });
+        }
         return Promise.resolve(true);
     }
     subscribeWorker(workerId, cb) {
@@ -133,6 +136,9 @@ class AnagentAdapter {
             .filter((w) => w.issueId === issueId)
             .map((w) => ({ ...w }));
     }
+    listWorkers() {
+        return Array.from(this.workers.values()).map((w) => ({ ...w }));
+    }
     // ── Internals ────────────────────────────────────────────────────────────────
     pipeEvents(workerId, proc) {
         let buf = '';
@@ -144,6 +150,11 @@ class AnagentAdapter {
                 const raw = (0, protocol_js_1.parseNdjsonLine)(line);
                 if (!raw)
                     continue;
+                if (raw.type === 'start' && raw.tmuxSession) {
+                    const worker = this.workers.get(workerId);
+                    if (worker)
+                        worker.tmuxSession = raw.tmuxSession;
+                }
                 const translated = (0, protocol_js_1.translateEvent)(raw);
                 if (translated)
                     this.notify(workerId, translated);
@@ -180,5 +191,13 @@ function resolveAnagent(override) {
 }
 function genId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+async function killTmuxSession(session) {
+    try {
+        await new Promise((resolve, reject) => {
+            (0, child_process_1.execFile)('tmux', ['kill-session', '-t', session], (err) => err ? reject(err) : resolve());
+        });
+    }
+    catch { /* ok */ }
 }
 //# sourceMappingURL=AnagentAdapter.js.map

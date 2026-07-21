@@ -111,6 +111,7 @@ export interface WorkerHandle {
   startedAt: string
   finishedAt?: string
   exitCode?: number
+  tmuxSession?: string
 }
 
 // Events streamed from an agent runtime (worker).

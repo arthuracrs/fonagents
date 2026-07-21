@@ -37,7 +37,7 @@ interface AnagentFailedEvent {
     durationMs?: number;
     output?: string;
 }
-type AnagentEvent = AnagentStartEvent | AnagentTextEvent | AnagentToolUseEvent | AnagentToolResultEvent | AnagentDoneEvent | AnagentFailedEvent;
+export type AnagentEvent = AnagentStartEvent | AnagentTextEvent | AnagentToolUseEvent | AnagentToolResultEvent | AnagentDoneEvent | AnagentFailedEvent;
 export declare function translateEvent(ev: AnagentEvent): AgentStreamEvent | null;
 export declare function parseNdjsonLine(line: string): AnagentEvent | null;
 export {};

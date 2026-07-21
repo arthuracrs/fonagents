@@ -204,6 +204,9 @@ var require_Orchestrator = __commonJS({
       getWorkerStatus(workerId) {
         return Promise.resolve(this.runtime.getWorker(workerId));
       }
+      listWorkers() {
+        return Promise.resolve(this.runtime.listWorkers());
+      }
       listRuntimes() {
         return this.runtime.listRuntimes();
       }
@@ -934,6 +937,10 @@ var require_AnagentAdapter = __commonJS({
           worker.status = "cancelled";
           worker.finishedAt = (/* @__PURE__ */ new Date()).toISOString();
         }
+        if (worker.tmuxSession) {
+          killTmuxSession(worker.tmuxSession).catch(() => {
+          });
+        }
         return Promise.resolve(true);
       }
       subscribeWorker(workerId, cb) {
@@ -949,6 +956,9 @@ var require_AnagentAdapter = __commonJS({
       getWorkersForIssue(issueId) {
         return Array.from(this.workers.values()).filter((w) => w.issueId === issueId).map((w) => ({ ...w }));
       }
+      listWorkers() {
+        return Array.from(this.workers.values()).map((w) => ({ ...w }));
+      }
       // ── Internals ────────────────────────────────────────────────────────────────
       pipeEvents(workerId, proc) {
         let buf = "";
@@ -960,6 +970,11 @@ var require_AnagentAdapter = __commonJS({
             const raw = (0, protocol_js_1.parseNdjsonLine)(line);
             if (!raw)
               continue;
+            if (raw.type === "start" && raw.tmuxSession) {
+              const worker = this.workers.get(workerId);
+              if (worker)
+                worker.tmuxSession = raw.tmuxSession;
+            }
             const translated = (0, protocol_js_1.translateEvent)(raw);
             if (translated)
               this.notify(workerId, translated);
@@ -995,6 +1010,14 @@ var require_AnagentAdapter = __commonJS({
     }
     function genId() {
       return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    }
+    async function killTmuxSession(session) {
+      try {
+        await new Promise((resolve, reject) => {
+          (0, child_process_1.execFile)("tmux", ["kill-session", "-t", session], (err) => err ? reject(err) : resolve());
+        });
+      } catch {
+      }
     }
   }
 });
@@ -22205,7 +22228,7 @@ var require_application = __commonJS({
     var finalhandler = require_finalhandler();
     var debug = require_src()("express:application");
     var View = require_view();
-    var http = require("node:http");
+    var http2 = require("node:http");
     var methods = require_utils3().methods;
     var compileETag = require_utils3().compileETag;
     var compileQueryParser = require_utils3().compileQueryParser;
@@ -22438,7 +22461,7 @@ var require_application = __commonJS({
       tryRender(view, renderOptions, done);
     };
     app.listen = function listen() {
-      var server = http.createServer(this);
+      var server = http2.createServer(this);
       var args = slice.call(arguments);
       if (typeof args[args.length - 1] === "function") {
         var done = args[args.length - 1] = once(args[args.length - 1]);
@@ -23225,12 +23248,12 @@ var require_request = __commonJS({
     var accepts = require_accepts();
     var isIP = require("node:net").isIP;
     var typeis = require_type_is();
-    var http = require("node:http");
+    var http2 = require("node:http");
     var fresh = require_fresh();
     var parseRange = require_range_parser();
     var parse = require_parseurl();
     var proxyaddr = require_proxy_addr();
-    var req = Object.create(http.IncomingMessage.prototype);
+    var req = Object.create(http2.IncomingMessage.prototype);
     module2.exports = req;
     req.get = req.header = function header(name) {
       if (!name) {
@@ -24324,7 +24347,7 @@ var require_response = __commonJS({
     var deprecate = require_depd()("express");
     var encodeUrl = require_encodeurl();
     var escapeHtml = require_escape_html();
-    var http = require("node:http");
+    var http2 = require("node:http");
     var onFinished = require_on_finished();
     var mime = require_mime_types();
     var path3 = require("node:path");
@@ -24340,7 +24363,7 @@ var require_response = __commonJS({
     var resolve = path3.resolve;
     var vary = require_vary();
     var { Buffer: Buffer2 } = require("node:buffer");
-    var res = Object.create(http.ServerResponse.prototype);
+    var res = Object.create(http2.ServerResponse.prototype);
     module2.exports = res;
     res.status = function status(code) {
       if (!Number.isInteger(code)) {
@@ -25400,6 +25423,9 @@ var require_HttpSseAdapter = __commonJS({
       app.delete("/api/triggers/:id", wrap(async (_req, res) => {
         res.json({ ok: true });
       }));
+      app.get("/api/workers", wrap(async (_req, res) => {
+        res.json(await command.listWorkers());
+      }));
       app.get("/api/workers/:id", wrap(async (req, res) => {
         const worker = await command.getWorkerStatus(param(req, "id"));
         if (!worker) {
@@ -25563,8 +25589,24 @@ var import_express = __toESM(require_express2());
 var import_path = __toESM(require("path"));
 var import_fs = __toESM(require("fs"));
 var _server = null;
+var _projectDir = null;
+function daemonStatePath(projectDir) {
+  return import_path.default.join(projectDir, ".fonagents", "daemon.json");
+}
+function writeStateFile(projectDir, port) {
+  const statePath = daemonStatePath(projectDir);
+  import_fs.default.mkdirSync(import_path.default.dirname(statePath), { recursive: true });
+  import_fs.default.writeFileSync(statePath, JSON.stringify({ port, projectDir, pid: process.pid }, null, 2), "utf8");
+}
+function removeStateFile(projectDir) {
+  try {
+    import_fs.default.unlinkSync(daemonStatePath(projectDir));
+  } catch {
+  }
+}
 function startDaemon(opts = {}) {
   const projectDir = opts.projectDir ?? process.env.PROJECT_DIR ?? process.cwd();
+  _projectDir = projectDir;
   const port = opts.port ?? parseInt(process.env.PORT ?? "3001", 10);
   const eventBus = new import_http_sse_adapter.SseEventBus();
   const managerRuntime = opts.managerRuntimeId ?? process.env.MANAGER_RUNTIME ?? "opencode";
@@ -25628,6 +25670,7 @@ function startDaemon(opts = {}) {
       const server = app.listen(port, () => {
         const actualPort = server.address().port;
         _server = server;
+        writeStateFile(projectDir, actualPort);
         console.log(`fonagents daemon: http://localhost:${actualPort}`);
         console.log(`Project:          ${projectDir}`);
         console.log(`MCP config:       ${mcpConfigPath}`);
@@ -25645,6 +25688,10 @@ function stopDaemon() {
     _server = null;
     s.close(() => {
     });
+  }
+  if (_projectDir) {
+    removeStateFile(_projectDir);
+    _projectDir = null;
   }
 }
 
@@ -25705,6 +25752,8 @@ var import_child_process2 = require("child_process");
 var import_fs2 = __toESM(require("fs"));
 var import_net = __toESM(require("net"));
 var import_path2 = __toESM(require("path"));
+var import_readline = __toESM(require("readline"));
+var import_http = __toESM(require("http"));
 function findFreePort(start) {
   return new Promise((resolve, reject) => {
     const server = import_net.default.createServer();
@@ -25745,10 +25794,122 @@ permission:
 ${prompt}`;
   import_fs2.default.writeFileSync(import_path2.default.join(agentsDir, "fonagents-manager.md"), content, "utf8");
 }
-async function main() {
+async function readDaemonState() {
+  const statePath = daemonStatePath(process.cwd());
+  if (!import_fs2.default.existsSync(statePath)) return null;
+  try {
+    return JSON.parse(import_fs2.default.readFileSync(statePath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+async function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    import_http.default.get(url, (res) => {
+      let data = "";
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+      res.on("end", () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch {
+          reject(new Error(`Invalid JSON from ${url}`));
+        }
+      });
+    }).on("error", reject);
+  });
+}
+async function runWorkers() {
+  const state = await readDaemonState();
+  if (!state) {
+    console.error("No running fonagents daemon found.");
+    console.error("Start one with: fonagents");
+    process.exit(1);
+  }
+  let workers;
+  try {
+    workers = await fetchJson(`http://localhost:${state.port}/api/workers`);
+  } catch {
+    console.error(`Cannot connect to daemon at localhost:${state.port}`);
+    console.error("Is it still running?");
+    process.exit(1);
+  }
+  if (workers.length === 0) {
+    console.log("No workers.");
+    return;
+  }
+  console.log();
+  const table = [];
+  for (let i = 0; i < workers.length; i++) {
+    const w = workers[i];
+    const session = w.tmuxSession ? ` tmux: ${w.tmuxSession}` : "";
+    const shortId = w.id.length > 12 ? w.id.slice(0, 12) + "\u2026" : w.id;
+    table.push([String(i + 1), shortId, w.issueId, w.runtimeId, w.status, session]);
+  }
+  const colWidths = table[0].map((_, ci) => Math.max(...table.map((r) => r[ci].length)));
+  for (const row of table) {
+    console.log("  " + row.map((cell, ci) => cell.padEnd(colWidths[ci])).join("  "));
+  }
+  const rl = import_readline.default.createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await new Promise((resolve) => {
+    rl.question("\nEnter number to tail, q to quit: ", resolve);
+  });
+  rl.close();
+  if (answer === "q") return;
+  const idx = parseInt(answer, 10) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= workers.length) {
+    console.log("Invalid selection.");
+    return;
+  }
+  const selected = workers[idx];
+  if (!selected.tmuxSession) {
+    console.log("Worker has no tmux session (headless mode). Nothing to tail.");
+    return;
+  }
+  attachTmux(selected.tmuxSession);
+}
+async function runTail(workerId) {
+  const state = await readDaemonState();
+  if (!state) {
+    console.error("No running fonagents daemon found.");
+    console.error("Start one with: fonagents");
+    process.exit(1);
+  }
+  let worker;
+  try {
+    worker = await fetchJson(`http://localhost:${state.port}/api/workers/${encodeURIComponent(workerId)}`);
+  } catch {
+    console.error(`Cannot connect to daemon at localhost:${state.port}`);
+    process.exit(1);
+  }
+  if (!worker || worker.error) {
+    console.error(`Worker ${workerId} not found.`);
+    process.exit(1);
+  }
+  if (!worker.tmuxSession) {
+    console.error(`Worker ${workerId} has no tmux session (headless mode). Nothing to tail.`);
+    process.exit(1);
+  }
+  attachTmux(worker.tmuxSession);
+}
+function attachTmux(session) {
+  console.log(`
+Attaching to tmux session: ${session}`);
+  console.log("(Detach with Ctrl+B, D)\n");
+  const proc = (0, import_child_process.spawn)("tmux", ["attach-session", "-t", session], { stdio: "inherit" });
+  proc.on("exit", () => process.exit(0));
+}
+async function runDaemon() {
   const args = parseArgs();
   const port = await findFreePort(args.port ?? parseInt(process.env.PORT ?? "3001", 10));
   const handle = await startDaemon({ port, managerRuntimeId: args.runtime });
+  const cleanup = () => {
+    stopDaemon();
+    process.exit(0);
+  };
+  process.on("SIGINT", cleanup);
+  process.on("SIGTERM", cleanup);
   if (args.webOnly) {
     const url = `http://localhost:${handle.port}`;
     console.log(`Opening ${url}`);
@@ -25795,6 +25956,21 @@ function launchAgent(runtimeId, prompt, mcpConfigPath, projectDir) {
         "--agent",
         "fonagents-manager"
       ], { stdio: "inherit", cwd: projectDir });
+  }
+}
+async function main() {
+  const subcommand = process.argv[2];
+  if (subcommand === "workers") {
+    await runWorkers();
+  } else if (subcommand === "tail") {
+    const workerId = process.argv[3];
+    if (!workerId) {
+      console.error("Usage: fonagents tail <worker-id>");
+      process.exit(1);
+    }
+    await runTail(workerId);
+  } else {
+    await runDaemon();
   }
 }
 main().catch((err) => {

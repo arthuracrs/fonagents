@@ -36,6 +36,9 @@ class Orchestrator {
     getWorkerStatus(workerId) {
         return Promise.resolve(this.runtime.getWorker(workerId));
     }
+    listWorkers() {
+        return Promise.resolve(this.runtime.listWorkers());
+    }
     listRuntimes() { return this.runtime.listRuntimes(); }
     listComments(issueId) { return this.tracker.listComments(issueId); }
     listDependencies(issueId) { return this.tracker.listDependencies(issueId); }

@@ -204,6 +204,9 @@ var require_Orchestrator = __commonJS({
       getWorkerStatus(workerId) {
         return Promise.resolve(this.runtime.getWorker(workerId));
       }
+      listWorkers() {
+        return Promise.resolve(this.runtime.listWorkers());
+      }
       listRuntimes() {
         return this.runtime.listRuntimes();
       }

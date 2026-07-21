@@ -25,9 +25,25 @@ export interface DaemonHandle {
 }
 
 let _server: http.Server | null = null
+let _projectDir: string | null = null
+
+export function daemonStatePath(projectDir: string): string {
+  return path.join(projectDir, '.fonagents', 'daemon.json')
+}
+
+function writeStateFile(projectDir: string, port: number): void {
+  const statePath = daemonStatePath(projectDir)
+  fs.mkdirSync(path.dirname(statePath), { recursive: true })
+  fs.writeFileSync(statePath, JSON.stringify({ port, projectDir, pid: process.pid }, null, 2), 'utf8')
+}
+
+function removeStateFile(projectDir: string): void {
+  try { fs.unlinkSync(daemonStatePath(projectDir)) } catch { /* ok */ }
+}
 
 export function startDaemon(opts: DaemonConfig = {}): Promise<DaemonHandle> {
   const projectDir = opts.projectDir ?? process.env.PROJECT_DIR ?? process.cwd()
+  _projectDir = projectDir
   const port = opts.port ?? parseInt(process.env.PORT ?? '3001', 10)
 
   const eventBus = new SseEventBus()
@@ -102,6 +118,7 @@ export function startDaemon(opts: DaemonConfig = {}): Promise<DaemonHandle> {
       const server = app.listen(port, () => {
         const actualPort = (server.address() as { port: number }).port
         _server = server
+        writeStateFile(projectDir, actualPort)
         console.log(`fonagents daemon: http://localhost:${actualPort}`)
         console.log(`Project:          ${projectDir}`)
         console.log(`MCP config:       ${mcpConfigPath}`)
@@ -119,5 +136,9 @@ export function stopDaemon(): void {
     const s = _server
     _server = null
     s.close(() => {})
+  }
+  if (_projectDir) {
+    removeStateFile(_projectDir)
+    _projectDir = null
   }
 }

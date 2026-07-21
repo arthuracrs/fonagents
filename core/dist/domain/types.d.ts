@@ -83,6 +83,7 @@ export interface WorkerHandle {
     startedAt: string;
     finishedAt?: string;
     exitCode?: number;
+    tmuxSession?: string;
 }
 export type AgentStreamEvent = {
     type: 'text';

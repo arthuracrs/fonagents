@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-import { startDaemon, stopDaemon } from './daemon.js'
+import { startDaemon, stopDaemon, daemonStatePath } from './daemon.js'
 import { MANAGER_PROMPT } from './manager-prompt.js'
 import { spawn } from 'child_process'
 import { exec } from 'child_process'
 import fs from 'fs'
 import net from 'net'
 import path from 'path'
+import readline from 'readline'
+import http from 'http'
 
 function findFreePort(start: number): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -56,11 +58,134 @@ ${prompt}`
   fs.writeFileSync(path.join(agentsDir, 'fonagents-manager.md'), content, 'utf8')
 }
 
-async function main() {
+async function readDaemonState(): Promise<{ port: number; projectDir: string } | null> {
+  const statePath = daemonStatePath(process.cwd())
+  if (!fs.existsSync(statePath)) return null
+  try {
+    return JSON.parse(fs.readFileSync(statePath, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+async function fetchJson(url: string): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    http.get(url, (res) => {
+      let data = ''
+      res.on('data', (chunk) => { data += chunk })
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)) }
+        catch { reject(new Error(`Invalid JSON from ${url}`)) }
+      })
+    }).on('error', reject)
+  })
+}
+
+async function runWorkers(): Promise<void> {
+  const state = await readDaemonState()
+  if (!state) {
+    console.error('No running fonagents daemon found.')
+    console.error('Start one with: fonagents')
+    process.exit(1)
+  }
+
+  let workers: any[]
+  try {
+    workers = (await fetchJson(`http://localhost:${state.port}/api/workers`)) as any[]
+  } catch {
+    console.error(`Cannot connect to daemon at localhost:${state.port}`)
+    console.error('Is it still running?')
+    process.exit(1)
+  }
+
+  if (workers.length === 0) {
+    console.log('No workers.')
+    return
+  }
+
+  console.log()
+  const table: string[][] = []
+  for (let i = 0; i < workers.length; i++) {
+    const w = workers[i]
+    const session = w.tmuxSession ? ` tmux: ${w.tmuxSession}` : ''
+    const shortId = w.id.length > 12 ? w.id.slice(0, 12) + '…' : w.id
+    table.push([String(i + 1), shortId, w.issueId, w.runtimeId, w.status, session])
+  }
+
+  const colWidths = table[0].map((_, ci) => Math.max(...table.map(r => r[ci].length)))
+
+  for (const row of table) {
+    console.log('  ' + row.map((cell, ci) => cell.padEnd(colWidths[ci])).join('  '))
+  }
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  const answer = await new Promise<string>((resolve) => {
+    rl.question('\nEnter number to tail, q to quit: ', resolve)
+  })
+  rl.close()
+
+  if (answer === 'q') return
+
+  const idx = parseInt(answer, 10) - 1
+  if (isNaN(idx) || idx < 0 || idx >= workers.length) {
+    console.log('Invalid selection.')
+    return
+  }
+
+  const selected = workers[idx]
+  if (!selected.tmuxSession) {
+    console.log('Worker has no tmux session (headless mode). Nothing to tail.')
+    return
+  }
+
+  attachTmux(selected.tmuxSession)
+}
+
+async function runTail(workerId: string): Promise<void> {
+  const state = await readDaemonState()
+  if (!state) {
+    console.error('No running fonagents daemon found.')
+    console.error('Start one with: fonagents')
+    process.exit(1)
+  }
+
+  let worker: any
+  try {
+    worker = await fetchJson(`http://localhost:${state.port}/api/workers/${encodeURIComponent(workerId)}`)
+  } catch {
+    console.error(`Cannot connect to daemon at localhost:${state.port}`)
+    process.exit(1)
+  }
+
+  if (!worker || (worker as any).error) {
+    console.error(`Worker ${workerId} not found.`)
+    process.exit(1)
+  }
+
+  if (!worker.tmuxSession) {
+    console.error(`Worker ${workerId} has no tmux session (headless mode). Nothing to tail.`)
+    process.exit(1)
+  }
+
+  attachTmux(worker.tmuxSession)
+}
+
+function attachTmux(session: string): void {
+  console.log(`\nAttaching to tmux session: ${session}`)
+  console.log('(Detach with Ctrl+B, D)\n')
+  const proc = spawn('tmux', ['attach-session', '-t', session], { stdio: 'inherit' })
+  proc.on('exit', () => process.exit(0))
+}
+
+async function runDaemon(): Promise<void> {
   const args = parseArgs()
   const port = await findFreePort(args.port ?? parseInt(process.env.PORT ?? '3001', 10))
 
   const handle = await startDaemon({ port, managerRuntimeId: args.runtime })
+
+  const cleanup = () => { stopDaemon(); process.exit(0) }
+  process.on('SIGINT', cleanup)
+  process.on('SIGTERM', cleanup)
 
   if (args.webOnly) {
     const url = `http://localhost:${handle.port}`
@@ -116,6 +241,23 @@ function launchAgent(
       return spawn('opencode', [
         '--agent', 'fonagents-manager',
       ], { stdio: 'inherit', cwd: projectDir })
+  }
+}
+
+async function main() {
+  const subcommand = process.argv[2]
+
+  if (subcommand === 'workers') {
+    await runWorkers()
+  } else if (subcommand === 'tail') {
+    const workerId = process.argv[3]
+    if (!workerId) {
+      console.error('Usage: fonagents tail <worker-id>')
+      process.exit(1)
+    }
+    await runTail(workerId)
+  } else {
+    await runDaemon()
   }
 }
 
