@@ -22228,7 +22228,7 @@ var require_application = __commonJS({
     var finalhandler = require_finalhandler();
     var debug = require_src()("express:application");
     var View = require_view();
-    var http2 = require("node:http");
+    var http3 = require("node:http");
     var methods = require_utils3().methods;
     var compileETag = require_utils3().compileETag;
     var compileQueryParser = require_utils3().compileQueryParser;
@@ -22461,7 +22461,7 @@ var require_application = __commonJS({
       tryRender(view, renderOptions, done);
     };
     app.listen = function listen() {
-      var server = http2.createServer(this);
+      var server = http3.createServer(this);
       var args = slice.call(arguments);
       if (typeof args[args.length - 1] === "function") {
         var done = args[args.length - 1] = once(args[args.length - 1]);
@@ -23248,12 +23248,12 @@ var require_request = __commonJS({
     var accepts = require_accepts();
     var isIP = require("node:net").isIP;
     var typeis = require_type_is();
-    var http2 = require("node:http");
+    var http3 = require("node:http");
     var fresh = require_fresh();
     var parseRange = require_range_parser();
     var parse = require_parseurl();
     var proxyaddr = require_proxy_addr();
-    var req = Object.create(http2.IncomingMessage.prototype);
+    var req = Object.create(http3.IncomingMessage.prototype);
     module2.exports = req;
     req.get = req.header = function header(name) {
       if (!name) {
@@ -24347,7 +24347,7 @@ var require_response = __commonJS({
     var deprecate = require_depd()("express");
     var encodeUrl = require_encodeurl();
     var escapeHtml = require_escape_html();
-    var http2 = require("node:http");
+    var http3 = require("node:http");
     var onFinished = require_on_finished();
     var mime = require_mime_types();
     var path3 = require("node:path");
@@ -24363,7 +24363,7 @@ var require_response = __commonJS({
     var resolve = path3.resolve;
     var vary = require_vary();
     var { Buffer: Buffer2 } = require("node:buffer");
-    var res = Object.create(http2.ServerResponse.prototype);
+    var res = Object.create(http3.ServerResponse.prototype);
     module2.exports = res;
     res.status = function status(code) {
       if (!Number.isInteger(code)) {
@@ -25588,6 +25588,7 @@ var import_http_sse_adapter = __toESM(require_dist7());
 var import_express = __toESM(require_express2());
 var import_path = __toESM(require("path"));
 var import_fs = __toESM(require("fs"));
+var import_http = __toESM(require("http"));
 var _server = null;
 var _projectDir = null;
 function daemonStatePath(projectDir) {
@@ -25604,11 +25605,15 @@ function writeStateFile(projectDir, port) {
   addToRegistry({ port, projectDir, pid: process.pid });
 }
 function removeStateFile(projectDir) {
+  const statePath = daemonStatePath(projectDir);
   try {
-    import_fs.default.unlinkSync(daemonStatePath(projectDir));
+    const state = JSON.parse(import_fs.default.readFileSync(statePath, "utf8"));
+    if (state.pid === process.pid) {
+      import_fs.default.unlinkSync(statePath);
+    }
   } catch {
   }
-  removeFromRegistry(projectDir);
+  removeFromRegistry(projectDir, process.pid);
 }
 function addToRegistry(entry) {
   const regPath = globalRegistryPath();
@@ -25622,17 +25627,42 @@ function addToRegistry(entry) {
   entries.push(entry);
   import_fs.default.writeFileSync(regPath, JSON.stringify(entries, null, 2), "utf8");
 }
-function removeFromRegistry(projectDir) {
+function removeFromRegistry(projectDir, pid) {
   const regPath = globalRegistryPath();
   try {
     let entries = JSON.parse(import_fs.default.readFileSync(regPath, "utf8"));
-    entries = entries.filter((e) => e.projectDir !== projectDir);
+    entries = entries.filter((e) => !(e.projectDir === projectDir && e.pid === pid));
     import_fs.default.writeFileSync(regPath, JSON.stringify(entries, null, 2), "utf8");
   } catch {
   }
 }
-function startDaemon(opts = {}) {
+async function checkDaemonRunning(projectDir) {
+  const statePath = daemonStatePath(projectDir);
+  try {
+    const state = JSON.parse(import_fs.default.readFileSync(statePath, "utf8"));
+    const alive = await new Promise((resolve) => {
+      const req = import_http.default.get(`http://localhost:${state.port}/api/health`, (res) => {
+        resolve(res.statusCode === 200);
+      });
+      req.on("error", () => resolve(false));
+      req.setTimeout(2e3, () => {
+        req.destroy();
+        resolve(false);
+      });
+    });
+    if (alive) return state;
+  } catch {
+  }
+  return null;
+}
+async function startDaemon(opts = {}) {
   const projectDir = opts.projectDir ?? process.env.PROJECT_DIR ?? process.cwd();
+  const existing = await checkDaemonRunning(projectDir);
+  if (existing) {
+    throw new Error(
+      `Daemon already running for project ${projectDir} on port ${existing.port} (PID ${existing.pid}). Stop it first or use a different project directory.`
+    );
+  }
   _projectDir = projectDir;
   const port = opts.port ?? parseInt(process.env.PORT ?? "3001", 10);
   const eventBus = new import_http_sse_adapter.SseEventBus();
@@ -25652,10 +25682,10 @@ function startDaemon(opts = {}) {
     const srcConfig = import_path.default.join(import_path.default.dirname(mcpConfigPath), "opencode.json");
     if (import_fs.default.existsSync(destConfig)) {
       try {
-        const existing = JSON.parse(import_fs.default.readFileSync(destConfig, "utf8"));
+        const existing2 = JSON.parse(import_fs.default.readFileSync(destConfig, "utf8"));
         const mcpSection = JSON.parse(import_fs.default.readFileSync(srcConfig, "utf8"));
-        existing.mcp = { ...existing.mcp ?? {}, ...mcpSection.mcp };
-        import_fs.default.writeFileSync(destConfig, JSON.stringify(existing, null, 2), "utf8");
+        existing2.mcp = { ...existing2.mcp ?? {}, ...mcpSection.mcp };
+        import_fs.default.writeFileSync(destConfig, JSON.stringify(existing2, null, 2), "utf8");
       } catch {
         import_fs.default.copyFileSync(srcConfig, destConfig);
       }
@@ -25785,7 +25815,7 @@ var import_fs2 = __toESM(require("fs"));
 var import_net = __toESM(require("net"));
 var import_path2 = __toESM(require("path"));
 var import_readline = __toESM(require("readline"));
-var import_http = __toESM(require("http"));
+var import_http2 = __toESM(require("http"));
 function findFreePort(start) {
   return new Promise((resolve, reject) => {
     const server = import_net.default.createServer();
@@ -25851,7 +25881,7 @@ async function readDaemonState() {
 }
 async function fetchJson(url) {
   return new Promise((resolve, reject) => {
-    import_http.default.get(url, (res) => {
+    import_http2.default.get(url, (res) => {
       let data = "";
       res.on("data", (chunk) => {
         data += chunk;

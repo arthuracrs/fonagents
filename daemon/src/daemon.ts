@@ -46,8 +46,14 @@ function writeStateFile(projectDir: string, port: number): void {
 }
 
 function removeStateFile(projectDir: string): void {
-  try { fs.unlinkSync(daemonStatePath(projectDir)) } catch { /* ok */ }
-  removeFromRegistry(projectDir)
+  const statePath = daemonStatePath(projectDir)
+  try {
+    const state: DaemonEntry = JSON.parse(fs.readFileSync(statePath, 'utf8'))
+    if (state.pid === process.pid) {
+      fs.unlinkSync(statePath)
+    }
+  } catch { /* can't read or invalid — state already gone */ }
+  removeFromRegistry(projectDir, process.pid)
 }
 
 function addToRegistry(entry: DaemonEntry): void {
@@ -60,17 +66,42 @@ function addToRegistry(entry: DaemonEntry): void {
   fs.writeFileSync(regPath, JSON.stringify(entries, null, 2), 'utf8')
 }
 
-function removeFromRegistry(projectDir: string): void {
+function removeFromRegistry(projectDir: string, pid: number): void {
   const regPath = globalRegistryPath()
   try {
     let entries: DaemonEntry[] = JSON.parse(fs.readFileSync(regPath, 'utf8'))
-    entries = entries.filter(e => e.projectDir !== projectDir)
+    entries = entries.filter(e => !(e.projectDir === projectDir && e.pid === pid))
     fs.writeFileSync(regPath, JSON.stringify(entries, null, 2), 'utf8')
   } catch { /* ok */ }
 }
 
-export function startDaemon(opts: DaemonConfig = {}): Promise<DaemonHandle> {
+async function checkDaemonRunning(projectDir: string): Promise<{ port: number; pid: number } | null> {
+  const statePath = daemonStatePath(projectDir)
+  try {
+    const state: DaemonEntry = JSON.parse(fs.readFileSync(statePath, 'utf8'))
+    const alive = await new Promise<boolean>((resolve) => {
+      const req = http.get(`http://localhost:${state.port}/api/health`, (res) => {
+        resolve(res.statusCode === 200)
+      })
+      req.on('error', () => resolve(false))
+      req.setTimeout(2000, () => { req.destroy(); resolve(false) })
+    })
+    if (alive) return state
+  } catch { /* no state or invalid */ }
+  return null
+}
+
+export async function startDaemon(opts: DaemonConfig = {}): Promise<DaemonHandle> {
   const projectDir = opts.projectDir ?? process.env.PROJECT_DIR ?? process.cwd()
+
+  const existing = await checkDaemonRunning(projectDir)
+  if (existing) {
+    throw new Error(
+      `Daemon already running for project ${projectDir} on port ${existing.port} (PID ${existing.pid}). ` +
+      `Stop it first or use a different project directory.`
+    )
+  }
+
   _projectDir = projectDir
   const port = opts.port ?? parseInt(process.env.PORT ?? '3001', 10)
 

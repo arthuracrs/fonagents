@@ -14,6 +14,7 @@ const http_sse_adapter_1 = require("@fonagents/http-sse-adapter");
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const http_1 = __importDefault(require("http"));
 let _server = null;
 let _projectDir = null;
 function daemonStatePath(projectDir) {
@@ -30,11 +31,15 @@ function writeStateFile(projectDir, port) {
     addToRegistry({ port, projectDir, pid: process.pid });
 }
 function removeStateFile(projectDir) {
+    const statePath = daemonStatePath(projectDir);
     try {
-        fs_1.default.unlinkSync(daemonStatePath(projectDir));
+        const state = JSON.parse(fs_1.default.readFileSync(statePath, 'utf8'));
+        if (state.pid === process.pid) {
+            fs_1.default.unlinkSync(statePath);
+        }
     }
-    catch { /* ok */ }
-    removeFromRegistry(projectDir);
+    catch { /* can't read or invalid — state already gone */ }
+    removeFromRegistry(projectDir, process.pid);
 }
 function addToRegistry(entry) {
     const regPath = globalRegistryPath();
@@ -48,17 +53,39 @@ function addToRegistry(entry) {
     entries.push(entry);
     fs_1.default.writeFileSync(regPath, JSON.stringify(entries, null, 2), 'utf8');
 }
-function removeFromRegistry(projectDir) {
+function removeFromRegistry(projectDir, pid) {
     const regPath = globalRegistryPath();
     try {
         let entries = JSON.parse(fs_1.default.readFileSync(regPath, 'utf8'));
-        entries = entries.filter(e => e.projectDir !== projectDir);
+        entries = entries.filter(e => !(e.projectDir === projectDir && e.pid === pid));
         fs_1.default.writeFileSync(regPath, JSON.stringify(entries, null, 2), 'utf8');
     }
     catch { /* ok */ }
 }
-function startDaemon(opts = {}) {
+async function checkDaemonRunning(projectDir) {
+    const statePath = daemonStatePath(projectDir);
+    try {
+        const state = JSON.parse(fs_1.default.readFileSync(statePath, 'utf8'));
+        const alive = await new Promise((resolve) => {
+            const req = http_1.default.get(`http://localhost:${state.port}/api/health`, (res) => {
+                resolve(res.statusCode === 200);
+            });
+            req.on('error', () => resolve(false));
+            req.setTimeout(2000, () => { req.destroy(); resolve(false); });
+        });
+        if (alive)
+            return state;
+    }
+    catch { /* no state or invalid */ }
+    return null;
+}
+async function startDaemon(opts = {}) {
     const projectDir = opts.projectDir ?? process.env.PROJECT_DIR ?? process.cwd();
+    const existing = await checkDaemonRunning(projectDir);
+    if (existing) {
+        throw new Error(`Daemon already running for project ${projectDir} on port ${existing.port} (PID ${existing.pid}). ` +
+            `Stop it first or use a different project directory.`);
+    }
     _projectDir = projectDir;
     const port = opts.port ?? parseInt(process.env.PORT ?? '3001', 10);
     const eventBus = new http_sse_adapter_1.SseEventBus();
