@@ -214,10 +214,12 @@ async function runDaemon(): Promise<void> {
   console.log(`\nManager mode — starting ${runtimeId} agent...`)
   console.log(`Daemon: ${daemonUrl}  |  Project: ${projectDir}\n`)
 
-  const prompt = MANAGER_PROMPT.replace(/PORT/g, String(handle.port))
-  writeAgentFile(projectDir, prompt)
+  const managerPrompt = MANAGER_PROMPT.replace(/PORT/g, String(handle.port))
+  writeAgentFile(projectDir, managerPrompt)
 
-  const agentProc = launchAgent(runtimeId, prompt, handle.mcpConfigPath, projectDir)
+  const initialPrompt = 'Review the current beads and project state, then ask if the user wants to start working on ready issues.'
+
+  const agentProc = launchAgent(runtimeId, initialPrompt, handle.mcpConfigPath, projectDir, managerPrompt)
 
   const onSigTerm = () => { agentProc.kill('SIGTERM') }
   process.on('SIGTERM', onSigTerm)
@@ -236,23 +238,25 @@ async function runDaemon(): Promise<void> {
 
 function launchAgent(
   runtimeId: string,
-  prompt: string,
+  initialPrompt: string,
   mcpConfigPath: string,
   projectDir: string,
+  systemPrompt?: string,
 ) {
   switch (runtimeId) {
     case 'claude-code':
       return spawn('claude', [
         '--dangerously-skip-permissions',
-        '--system-prompt', prompt,
+        ...(systemPrompt ? ['--system-prompt', systemPrompt] : []),
         '--mcp-config', mcpConfigPath,
+        initialPrompt,
       ], { stdio: 'inherit', cwd: projectDir })
 
     case 'opencode':
     default:
       return spawn('opencode', [
         '--agent', 'fonagents-manager',
-        prompt,
+        initialPrompt,
       ], { stdio: 'inherit', cwd: projectDir })
   }
 }

@@ -25999,9 +25999,10 @@ async function runDaemon() {
 Manager mode \u2014 starting ${runtimeId} agent...`);
   console.log(`Daemon: ${daemonUrl}  |  Project: ${projectDir}
 `);
-  const prompt = MANAGER_PROMPT.replace(/PORT/g, String(handle.port));
-  writeAgentFile(projectDir, prompt);
-  const agentProc = launchAgent(runtimeId, prompt, handle.mcpConfigPath, projectDir);
+  const managerPrompt = MANAGER_PROMPT.replace(/PORT/g, String(handle.port));
+  writeAgentFile(projectDir, managerPrompt);
+  const initialPrompt = "Review the current beads and project state, then ask if the user wants to start working on ready issues.";
+  const agentProc = launchAgent(runtimeId, initialPrompt, handle.mcpConfigPath, projectDir, managerPrompt);
   const onSigTerm = () => {
     agentProc.kill("SIGTERM");
   };
@@ -26016,22 +26017,22 @@ Agent exited (code: ${exitCode ?? "error"}). Shutting down...`);
   stopDaemon();
   process.exit(exitCode ?? 0);
 }
-function launchAgent(runtimeId, prompt, mcpConfigPath, projectDir) {
+function launchAgent(runtimeId, initialPrompt, mcpConfigPath, projectDir, systemPrompt) {
   switch (runtimeId) {
     case "claude-code":
       return (0, import_child_process.spawn)("claude", [
         "--dangerously-skip-permissions",
-        "--system-prompt",
-        prompt,
+        ...systemPrompt ? ["--system-prompt", systemPrompt] : [],
         "--mcp-config",
-        mcpConfigPath
+        mcpConfigPath,
+        initialPrompt
       ], { stdio: "inherit", cwd: projectDir });
     case "opencode":
     default:
       return (0, import_child_process.spawn)("opencode", [
         "--agent",
         "fonagents-manager",
-        prompt
+        initialPrompt
       ], { stdio: "inherit", cwd: projectDir });
   }
 }
