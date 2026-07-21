@@ -25593,14 +25593,41 @@ var _projectDir = null;
 function daemonStatePath(projectDir) {
   return import_path.default.join(projectDir, ".fonagents", "daemon.json");
 }
+function globalRegistryPath() {
+  const home = process.env.HOME || process.env.USERPROFILE || "/tmp";
+  return import_path.default.join(home, ".fonagents", "daemons.json");
+}
 function writeStateFile(projectDir, port) {
   const statePath = daemonStatePath(projectDir);
   import_fs.default.mkdirSync(import_path.default.dirname(statePath), { recursive: true });
   import_fs.default.writeFileSync(statePath, JSON.stringify({ port, projectDir, pid: process.pid }, null, 2), "utf8");
+  addToRegistry({ port, projectDir, pid: process.pid });
 }
 function removeStateFile(projectDir) {
   try {
     import_fs.default.unlinkSync(daemonStatePath(projectDir));
+  } catch {
+  }
+  removeFromRegistry(projectDir);
+}
+function addToRegistry(entry) {
+  const regPath = globalRegistryPath();
+  import_fs.default.mkdirSync(import_path.default.dirname(regPath), { recursive: true });
+  let entries = [];
+  try {
+    entries = JSON.parse(import_fs.default.readFileSync(regPath, "utf8"));
+  } catch {
+  }
+  entries = entries.filter((e) => e.projectDir !== entry.projectDir);
+  entries.push(entry);
+  import_fs.default.writeFileSync(regPath, JSON.stringify(entries, null, 2), "utf8");
+}
+function removeFromRegistry(projectDir) {
+  const regPath = globalRegistryPath();
+  try {
+    let entries = JSON.parse(import_fs.default.readFileSync(regPath, "utf8"));
+    entries = entries.filter((e) => e.projectDir !== projectDir);
+    import_fs.default.writeFileSync(regPath, JSON.stringify(entries, null, 2), "utf8");
   } catch {
   }
 }
@@ -25801,12 +25828,26 @@ ${prompt}`;
 }
 async function readDaemonState() {
   const statePath = daemonStatePath(process.cwd());
-  if (!import_fs2.default.existsSync(statePath)) return null;
-  try {
-    return JSON.parse(import_fs2.default.readFileSync(statePath, "utf8"));
-  } catch {
-    return null;
+  if (import_fs2.default.existsSync(statePath)) {
+    try {
+      return JSON.parse(import_fs2.default.readFileSync(statePath, "utf8"));
+    } catch {
+    }
   }
+  const regPath = globalRegistryPath();
+  if (!import_fs2.default.existsSync(regPath)) return null;
+  try {
+    const entries = JSON.parse(import_fs2.default.readFileSync(regPath, "utf8"));
+    for (const entry of entries) {
+      try {
+        await fetchJson(`http://localhost:${entry.port}/api/health`);
+        return entry;
+      } catch {
+      }
+    }
+  } catch {
+  }
+  return null;
 }
 async function fetchJson(url) {
   return new Promise((resolve, reject) => {

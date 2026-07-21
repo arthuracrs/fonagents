@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { startDaemon, stopDaemon, daemonStatePath } from './daemon.js'
+import { startDaemon, stopDaemon, daemonStatePath, globalRegistryPath } from './daemon.js'
 import { MANAGER_PROMPT } from './manager-prompt.js'
 import { spawn } from 'child_process'
 import { exec } from 'child_process'
@@ -59,13 +59,25 @@ ${prompt}`
 }
 
 async function readDaemonState(): Promise<{ port: number; projectDir: string } | null> {
+  // 1. Check local state file first
   const statePath = daemonStatePath(process.cwd())
-  if (!fs.existsSync(statePath)) return null
-  try {
-    return JSON.parse(fs.readFileSync(statePath, 'utf8'))
-  } catch {
-    return null
+  if (fs.existsSync(statePath)) {
+    try { return JSON.parse(fs.readFileSync(statePath, 'utf8')) } catch { /* ok */ }
   }
+
+  // 2. Check global registry — find first live daemon
+  const regPath = globalRegistryPath()
+  if (!fs.existsSync(regPath)) return null
+  try {
+    const entries: { port: number; projectDir: string; pid: number }[] = JSON.parse(fs.readFileSync(regPath, 'utf8'))
+    for (const entry of entries) {
+      try {
+        await fetchJson(`http://localhost:${entry.port}/api/health`)
+        return entry
+      } catch { /* dead daemon, skip */ }
+    }
+  } catch { /* ok */ }
+  return null
 }
 
 async function fetchJson(url: string): Promise<unknown> {

@@ -31,14 +31,42 @@ export function daemonStatePath(projectDir: string): string {
   return path.join(projectDir, '.fonagents', 'daemon.json')
 }
 
+export function globalRegistryPath(): string {
+  const home = process.env.HOME || process.env.USERPROFILE || '/tmp'
+  return path.join(home, '.fonagents', 'daemons.json')
+}
+
+interface DaemonEntry { port: number; projectDir: string; pid: number }
+
 function writeStateFile(projectDir: string, port: number): void {
   const statePath = daemonStatePath(projectDir)
   fs.mkdirSync(path.dirname(statePath), { recursive: true })
   fs.writeFileSync(statePath, JSON.stringify({ port, projectDir, pid: process.pid }, null, 2), 'utf8')
+  addToRegistry({ port, projectDir, pid: process.pid })
 }
 
 function removeStateFile(projectDir: string): void {
   try { fs.unlinkSync(daemonStatePath(projectDir)) } catch { /* ok */ }
+  removeFromRegistry(projectDir)
+}
+
+function addToRegistry(entry: DaemonEntry): void {
+  const regPath = globalRegistryPath()
+  fs.mkdirSync(path.dirname(regPath), { recursive: true })
+  let entries: DaemonEntry[] = []
+  try { entries = JSON.parse(fs.readFileSync(regPath, 'utf8')) } catch { /* ok */ }
+  entries = entries.filter(e => e.projectDir !== entry.projectDir)
+  entries.push(entry)
+  fs.writeFileSync(regPath, JSON.stringify(entries, null, 2), 'utf8')
+}
+
+function removeFromRegistry(projectDir: string): void {
+  const regPath = globalRegistryPath()
+  try {
+    let entries: DaemonEntry[] = JSON.parse(fs.readFileSync(regPath, 'utf8'))
+    entries = entries.filter(e => e.projectDir !== projectDir)
+    fs.writeFileSync(regPath, JSON.stringify(entries, null, 2), 'utf8')
+  } catch { /* ok */ }
 }
 
 export function startDaemon(opts: DaemonConfig = {}): Promise<DaemonHandle> {

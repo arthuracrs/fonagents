@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.daemonStatePath = daemonStatePath;
+exports.globalRegistryPath = globalRegistryPath;
 exports.startDaemon = startDaemon;
 exports.stopDaemon = stopDaemon;
 const core_1 = require("@fonagents/core");
@@ -18,14 +19,41 @@ let _projectDir = null;
 function daemonStatePath(projectDir) {
     return path_1.default.join(projectDir, '.fonagents', 'daemon.json');
 }
+function globalRegistryPath() {
+    const home = process.env.HOME || process.env.USERPROFILE || '/tmp';
+    return path_1.default.join(home, '.fonagents', 'daemons.json');
+}
 function writeStateFile(projectDir, port) {
     const statePath = daemonStatePath(projectDir);
     fs_1.default.mkdirSync(path_1.default.dirname(statePath), { recursive: true });
     fs_1.default.writeFileSync(statePath, JSON.stringify({ port, projectDir, pid: process.pid }, null, 2), 'utf8');
+    addToRegistry({ port, projectDir, pid: process.pid });
 }
 function removeStateFile(projectDir) {
     try {
         fs_1.default.unlinkSync(daemonStatePath(projectDir));
+    }
+    catch { /* ok */ }
+    removeFromRegistry(projectDir);
+}
+function addToRegistry(entry) {
+    const regPath = globalRegistryPath();
+    fs_1.default.mkdirSync(path_1.default.dirname(regPath), { recursive: true });
+    let entries = [];
+    try {
+        entries = JSON.parse(fs_1.default.readFileSync(regPath, 'utf8'));
+    }
+    catch { /* ok */ }
+    entries = entries.filter(e => e.projectDir !== entry.projectDir);
+    entries.push(entry);
+    fs_1.default.writeFileSync(regPath, JSON.stringify(entries, null, 2), 'utf8');
+}
+function removeFromRegistry(projectDir) {
+    const regPath = globalRegistryPath();
+    try {
+        let entries = JSON.parse(fs_1.default.readFileSync(regPath, 'utf8'));
+        entries = entries.filter(e => e.projectDir !== projectDir);
+        fs_1.default.writeFileSync(regPath, JSON.stringify(entries, null, 2), 'utf8');
     }
     catch { /* ok */ }
 }

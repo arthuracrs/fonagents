@@ -12,6 +12,7 @@ export interface DaemonHandle {
     managerRuntimeId: string;
 }
 export declare function daemonStatePath(projectDir: string): string;
+export declare function globalRegistryPath(): string;
 export declare function startDaemon(opts?: DaemonConfig): Promise<DaemonHandle>;
 export declare function stopDaemon(): void;
 //# sourceMappingURL=daemon.d.ts.map
