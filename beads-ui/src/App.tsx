@@ -3,7 +3,6 @@ import { api } from "./api";
 import type { Stats, Status, IssueType } from "./types";
 import { IssueModel } from "./models/IssueModel";
 import { Sidebar, type View } from "./components/Sidebar";
-import { IssueRow } from "./components/IssueRow";
 import { KanbanBoard } from "./components/KanbanBoard";
 import { IssueDetail } from "./components/IssueDetail";
 import { ExecutionView } from "./components/ExecutionView";
@@ -13,10 +12,8 @@ import { StatsBar } from "./components/StatsBar";
 
 const NON_ISSUE_VIEWS = new Set(["formulas", "graph"]);
 
-type Layout = "list" | "board";
-
 const viewLabel: Record<View, string> = {
-  all: "All Issues",
+  all: "Board",
   ready: "Ready to Work",
   formulas: "Formulas",
   graph: "Dependency Graph",
@@ -40,7 +37,6 @@ const typeFilters: { value: IssueType; label: string; color: string }[] = [
 
 export default function App() {
   const [view, setView] = useState<View>("all");
-  const [layout, setLayout] = useState<Layout>("list");
   const [issues, setIssues] = useState<IssueModel[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -167,8 +163,6 @@ export default function App() {
     );
   }
 
-  const showKanban = layout === "board" && view !== "ready";
-
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar view={view} onView={handleViewChange} />
@@ -228,33 +222,6 @@ export default function App() {
           <div className="ml-auto flex items-center gap-3">
             <StatsBar stats={stats} />
 
-            {!NON_ISSUE_VIEWS.has(view) && (
-              <div className="flex rounded-md border border-[var(--border)] overflow-hidden">
-                <button
-                  onClick={() => setLayout("list")}
-                  title="List view"
-                  className={`px-2.5 py-1.5 text-sm transition-colors ${
-                    layout === "list"
-                      ? "bg-[var(--surface2)] text-[var(--text)]"
-                      : "text-[var(--text-muted)] hover:text-[var(--text)]"
-                  }`}
-                >
-                  ≡
-                </button>
-                <button
-                  onClick={() => setLayout("board")}
-                  title="Board view"
-                  className={`px-2.5 py-1.5 text-sm transition-colors border-l border-[var(--border)] ${
-                    layout === "board"
-                      ? "bg-[var(--surface2)] text-[var(--text)]"
-                      : "text-[var(--text-muted)] hover:text-[var(--text)]"
-                  }`}
-                >
-                  ⊞
-                </button>
-              </div>
-            )}
-
             <button
               onClick={() => setSelectedId("__new__")}
               className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-[var(--bg)] hover:opacity-90 transition-opacity"
@@ -298,26 +265,9 @@ export default function App() {
         )}
 
         {!NON_ISSUE_VIEWS.has(view) && !loading && !error && issues.length > 0 && (
-          showKanban ? (
-            <div className="flex-1 overflow-hidden">
-              <KanbanBoard issues={issues} onSelect={setSelectedId} />
-            </div>
-          ) : (
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              <div className="mb-3 text-xs text-[var(--text-muted)]">
-                {issues.length} issue{issues.length !== 1 ? "s" : ""}
-              </div>
-              <div className="space-y-2">
-                {issues.map((issue) => (
-                  <IssueRow
-                    key={issue.id}
-                    issue={issue}
-                    onClick={() => setSelectedId(issue.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          )
+          <div className="flex-1 overflow-hidden">
+            <KanbanBoard issues={issues} onSelect={setSelectedId} />
+          </div>
         )}
       </main>
 
