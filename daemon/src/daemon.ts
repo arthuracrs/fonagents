@@ -139,7 +139,7 @@ export async function startDaemon(opts: DaemonConfig = {}): Promise<DaemonHandle
   const tracker = new BeadsAdapter({
     bdPath: opts.bdPath ?? process.env.BD_PATH,
     projectDir,
-    actor: process.env.BEADS_ACTOR,
+    actor: process.env.BEADS_ACTOR ?? 'fonagents-manager',
   })
 
   const runtime = new AnagentAdapter({

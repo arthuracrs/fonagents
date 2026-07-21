@@ -121,7 +121,7 @@ async function startDaemon(opts = {}) {
     const tracker = new beads_adapter_1.BeadsAdapter({
         bdPath: opts.bdPath ?? process.env.BD_PATH,
         projectDir,
-        actor: process.env.BEADS_ACTOR,
+        actor: process.env.BEADS_ACTOR ?? 'fonagents-manager',
     });
     const runtime = new anagent_adapter_1.AnagentAdapter({
         anagentPath: opts.anagentPath ?? process.env.ANAGENT_PATH,
