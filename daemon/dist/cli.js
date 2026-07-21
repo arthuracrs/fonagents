@@ -25914,14 +25914,15 @@ async function runWorkers() {
     console.error("Is it still running?");
     process.exit(1);
   }
-  if (workers.length === 0) {
-    console.log("No workers.");
+  const active = workers.filter((w) => w.status === "running" || w.status === "pending");
+  if (active.length === 0) {
+    console.log("No active workers.");
     return;
   }
   console.log();
   const table = [];
-  for (let i = 0; i < workers.length; i++) {
-    const w = workers[i];
+  for (let i = 0; i < active.length; i++) {
+    const w = active[i];
     const session = w.tmuxSession ? ` tmux: ${w.tmuxSession}` : "";
     const shortId = w.id.length > 12 ? w.id.slice(0, 12) + "\u2026" : w.id;
     table.push([String(i + 1), shortId, w.issueId, w.runtimeId, w.status, session]);
@@ -25937,11 +25938,11 @@ async function runWorkers() {
   rl.close();
   if (answer === "q") return;
   const idx = parseInt(answer, 10) - 1;
-  if (isNaN(idx) || idx < 0 || idx >= workers.length) {
+  if (isNaN(idx) || idx < 0 || idx >= active.length) {
     console.log("Invalid selection.");
     return;
   }
-  const selected = workers[idx];
+  const selected = active[idx];
   if (!selected.tmuxSession) {
     console.log("Worker has no tmux session (headless mode). Nothing to tail.");
     return;

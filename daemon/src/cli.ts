@@ -111,15 +111,17 @@ async function runWorkers(): Promise<void> {
     process.exit(1)
   }
 
-  if (workers.length === 0) {
-    console.log('No workers.')
+  const active = workers.filter((w: any) => w.status === 'running' || w.status === 'pending')
+
+  if (active.length === 0) {
+    console.log('No active workers.')
     return
   }
 
   console.log()
   const table: string[][] = []
-  for (let i = 0; i < workers.length; i++) {
-    const w = workers[i]
+  for (let i = 0; i < active.length; i++) {
+    const w = active[i]
     const session = w.tmuxSession ? ` tmux: ${w.tmuxSession}` : ''
     const shortId = w.id.length > 12 ? w.id.slice(0, 12) + '…' : w.id
     table.push([String(i + 1), shortId, w.issueId, w.runtimeId, w.status, session])
@@ -140,12 +142,12 @@ async function runWorkers(): Promise<void> {
   if (answer === 'q') return
 
   const idx = parseInt(answer, 10) - 1
-  if (isNaN(idx) || idx < 0 || idx >= workers.length) {
+  if (isNaN(idx) || idx < 0 || idx >= active.length) {
     console.log('Invalid selection.')
     return
   }
 
-  const selected = workers[idx]
+  const selected = active[idx]
   if (!selected.tmuxSession) {
     console.log('Worker has no tmux session (headless mode). Nothing to tail.')
     return
