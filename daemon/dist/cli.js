@@ -26030,7 +26030,8 @@ function launchAgent(runtimeId, prompt, mcpConfigPath, projectDir) {
     default:
       return (0, import_child_process.spawn)("opencode", [
         "--agent",
-        "fonagents-manager"
+        "fonagents-manager",
+        prompt
       ], { stdio: "inherit", cwd: projectDir });
   }
 }
