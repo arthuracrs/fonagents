@@ -184,10 +184,17 @@ async function runTail(workerId: string): Promise<void> {
 }
 
 function attachTmux(session: string): void {
-  console.log(`\nAttaching to tmux session: ${session}`)
-  console.log('(Detach with Ctrl+B, D)\n')
-  const proc = spawn('tmux', ['attach-session', '-t', session], { stdio: 'inherit' })
-  proc.on('exit', () => process.exit(0))
+  exec(`tmux has-session -t ${session}`, (err) => {
+    if (err) {
+      console.error(`\ntmux session "${session}" has ended.`)
+      console.error('The worker completed and the session was cleaned up.')
+      process.exit(1)
+    }
+    console.log(`\nAttaching to tmux session: ${session}`)
+    console.log('(Detach with Ctrl+B, D)\n')
+    const proc = spawn('tmux', ['attach-session', '-t', session], { stdio: 'inherit' })
+    proc.on('exit', () => process.exit(0))
+  })
 }
 
 async function runDaemon(): Promise<void> {

@@ -25973,11 +25973,19 @@ async function runTail(workerId) {
   attachTmux(worker.tmuxSession);
 }
 function attachTmux(session) {
-  console.log(`
+  (0, import_child_process2.exec)(`tmux has-session -t ${session}`, (err) => {
+    if (err) {
+      console.error(`
+tmux session "${session}" has ended.`);
+      console.error("The worker completed and the session was cleaned up.");
+      process.exit(1);
+    }
+    console.log(`
 Attaching to tmux session: ${session}`);
-  console.log("(Detach with Ctrl+B, D)\n");
-  const proc = (0, import_child_process.spawn)("tmux", ["attach-session", "-t", session], { stdio: "inherit" });
-  proc.on("exit", () => process.exit(0));
+    console.log("(Detach with Ctrl+B, D)\n");
+    const proc = (0, import_child_process.spawn)("tmux", ["attach-session", "-t", session], { stdio: "inherit" });
+    proc.on("exit", () => process.exit(0));
+  });
 }
 async function runDaemon() {
   const args = parseArgs();
