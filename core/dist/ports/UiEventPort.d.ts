@@ -12,6 +12,7 @@ export type UiEvent = {
 } | {
     type: 'worker_status';
     workerId: WorkerId;
+    issueId: IssueId;
     status: WorkerStatus;
     exitCode?: number;
 } | {

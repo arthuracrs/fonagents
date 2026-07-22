@@ -3,6 +3,7 @@ import type { OrchestratorConfig } from '@fonagents/core'
 import { BeadsAdapter } from '@fonagents/beads-adapter'
 import { AnagentAdapter } from '@fonagents/anagent-adapter'
 import { createHttpSseApp, SseEventBus, writeMcpConfig, type McpConfigFormat } from '@fonagents/http-sse-adapter'
+import { Overseer, type OverseerConfig } from './overseer.js'
 import express from 'express'
 import type { Express } from 'express'
 import path from 'path'
@@ -26,6 +27,7 @@ export interface DaemonHandle {
 
 let _server: http.Server | null = null
 let _projectDir: string | null = null
+let _overseer: Overseer | null = null
 
 export function daemonStatePath(projectDir: string): string {
   return path.join(projectDir, '.fonagents', 'daemon.json')
@@ -154,6 +156,17 @@ export async function startDaemon(opts: DaemonConfig = {}): Promise<DaemonHandle
 
   const orchestrator = new Orchestrator(tracker, runtime, eventBus, orchestratorConfig)
 
+  const overseerConfig: OverseerConfig = {
+    enabled: process.env.FONAGENTS_SUPERVISION_ENABLED !== 'false',
+    mode: (process.env.FONAGENTS_SUPERVISION_MODE as 'queue' | 'batch') || 'queue',
+    debounceMs: parseInt(process.env.FONAGENTS_SUPERVISION_DEBOUNCE_MS || '5000', 10),
+    maxConcurrent: parseInt(process.env.FONAGENTS_SUPERVISION_MAX_CONCURRENT || '5', 10),
+    timeoutSec: parseInt(process.env.FONAGENTS_SUPERVISION_TIMEOUT_SEC || '600', 10),
+  }
+
+  _overseer = new Overseer(eventBus.events, overseerConfig, projectDir)
+  _overseer.start()
+
   const { app } = createHttpSseApp(orchestrator, orchestrator, eventBus, { port, projectDir })
 
   app.get('/api/health', (_req, res) => {
@@ -191,6 +204,10 @@ export async function startDaemon(opts: DaemonConfig = {}): Promise<DaemonHandle
 }
 
 export function stopDaemon(): void {
+  if (_overseer) {
+    _overseer.stop()
+    _overseer = null
+  }
   if (_server) {
     const s = _server
     _server = null

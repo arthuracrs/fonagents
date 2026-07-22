@@ -259,12 +259,93 @@ var require_manager_initial = __commonJS({
   }
 });
 
+// ../../prompts/dist/overseer-system.js
+var require_overseer_system = __commonJS({
+  "../../prompts/dist/overseer-system.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.OVERSEER_SYSTEM_PROMPT = void 0;
+    exports2.OVERSEER_SYSTEM_PROMPT = `You are a fonagents Overseer. You automatically review the board after workers complete and dispatch new work.
+
+Available MCP tools (fonagents):
+
+tool  | decompose
+---   | ---
+input | formulaName (string, required), vars (object, optional)
+desc  | Decompose a request into a swarm molecule of child issues using a beads formula.
+
+tool  | dispatchWorker
+---   | ---
+input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
+desc  | Dispatch a one-shot coding agent onto a ready child issue.
+
+tool  | listReady
+---   | ---
+input | moleculeId (string, optional)
+desc  | List claimable/ready work, optionally scoped to a molecule.
+
+tool  | workerStatus
+---   | ---
+input | workerId (string, optional), issueId (string, optional)
+desc  | Inspect worker progress by worker id or issue id.
+
+tool  | escalate
+---   | ---
+input | reason (string, required), issueId (string, optional)
+desc  | Escalate to the human operator. Creates a human gate and blocks until resolved via the UI.
+
+tool  | recordProgress
+---   | ---
+input | issueId (string, required), body (string, required)
+desc  | Record a progress comment on an issue (audit trail).
+
+tool  | completeIssue
+---   | ---
+input | issueId (string, required), reason (string, optional)
+desc  | Mark an issue as complete.
+
+Workflow:
+1. Complete any done issues: use completeIssue to mark them done.
+2. Check ready work: use listReady to see what is claimable.
+3. Check active workers: use workerStatus to see what is running.
+4. Dispatch workers on ready issues: use dispatchWorker.
+5. If no ready work and no active workers, exit \u2014 the molecule is stuck or complete.
+
+Rules:
+- NEVER execute issues yourself. You are an overseer, not a worker. Always use dispatchWorker to assign work.
+- Use bd show <id> --long to inspect issues when needed.
+- If nothing to do, exit immediately. Do not ask questions.
+`;
+  }
+});
+
+// ../../prompts/dist/overseer-user.js
+var require_overseer_user = __commonJS({
+  "../../prompts/dist/overseer-user.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.buildOverseerPrompt = buildOverseerPrompt;
+    function buildOverseerPrompt(completedIssues, failedIssues) {
+      const parts = [];
+      if (completedIssues.length > 0) {
+        parts.push(`Workers for these issues just completed: ${completedIssues.join(", ")}`);
+      }
+      if (failedIssues.length > 0) {
+        parts.push(`Workers for these issues failed: ${failedIssues.join(", ")}`);
+      }
+      parts.push("");
+      parts.push("Review the board state and dispatch ready work.");
+      return parts.join("\n");
+    }
+  }
+});
+
 // ../../prompts/dist/index.js
 var require_dist = __commonJS({
   "../../prompts/dist/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.INITIAL_PROMPT = exports2.buildWorkerSystemPrompt = exports2.DEFAULT_PROMPT = exports2.MANAGER_PROMPT = void 0;
+    exports2.buildOverseerPrompt = exports2.OVERSEER_SYSTEM_PROMPT = exports2.INITIAL_PROMPT = exports2.buildWorkerSystemPrompt = exports2.DEFAULT_PROMPT = exports2.MANAGER_PROMPT = void 0;
     var manager_system_js_1 = require_manager_system();
     Object.defineProperty(exports2, "MANAGER_PROMPT", { enumerable: true, get: function() {
       return manager_system_js_1.MANAGER_PROMPT;
@@ -280,6 +361,14 @@ var require_dist = __commonJS({
     var manager_initial_js_1 = require_manager_initial();
     Object.defineProperty(exports2, "INITIAL_PROMPT", { enumerable: true, get: function() {
       return manager_initial_js_1.INITIAL_PROMPT;
+    } });
+    var overseer_system_js_1 = require_overseer_system();
+    Object.defineProperty(exports2, "OVERSEER_SYSTEM_PROMPT", { enumerable: true, get: function() {
+      return overseer_system_js_1.OVERSEER_SYSTEM_PROMPT;
+    } });
+    var overseer_user_js_1 = require_overseer_user();
+    Object.defineProperty(exports2, "buildOverseerPrompt", { enumerable: true, get: function() {
+      return overseer_user_js_1.buildOverseerPrompt;
     } });
   }
 });
@@ -452,10 +541,13 @@ var require_Orchestrator = __commonJS({
       forwardWorkerEvent(workerId, ev) {
         if (ev.type === "text")
           this.emit({ type: "worker_output", workerId, delta: ev.delta });
-        else if (ev.type === "done")
-          this.emit({ type: "worker_status", workerId, status: "completed", exitCode: ev.exitCode });
-        else if (ev.type === "failed")
-          this.emit({ type: "worker_status", workerId, status: "failed", exitCode: ev.exitCode });
+        else if (ev.type === "done") {
+          const worker = this.runtime.getWorker(workerId);
+          this.emit({ type: "worker_status", workerId, issueId: worker?.issueId ?? "", status: "completed", exitCode: ev.exitCode });
+        } else if (ev.type === "failed") {
+          const worker = this.runtime.getWorker(workerId);
+          this.emit({ type: "worker_status", workerId, issueId: worker?.issueId ?? "", status: "failed", exitCode: ev.exitCode });
+        }
       }
       async currentMoleculeRoot() {
         if (!this.currentMoleculeId)

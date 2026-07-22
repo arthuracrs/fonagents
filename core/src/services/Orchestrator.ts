@@ -178,8 +178,13 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
 
   private forwardWorkerEvent(workerId: WorkerId, ev: AgentStreamEvent): void {
     if (ev.type === 'text') this.emit({ type: 'worker_output', workerId, delta: ev.delta })
-    else if (ev.type === 'done') this.emit({ type: 'worker_status', workerId, status: 'completed', exitCode: ev.exitCode })
-    else if (ev.type === 'failed') this.emit({ type: 'worker_status', workerId, status: 'failed', exitCode: ev.exitCode })
+    else if (ev.type === 'done') {
+      const worker = this.runtime.getWorker(workerId)
+      this.emit({ type: 'worker_status', workerId, issueId: worker?.issueId ?? '', status: 'completed', exitCode: ev.exitCode })
+    } else if (ev.type === 'failed') {
+      const worker = this.runtime.getWorker(workerId)
+      this.emit({ type: 'worker_status', workerId, issueId: worker?.issueId ?? '', status: 'failed', exitCode: ev.exitCode })
+    }
   }
 
   private async currentMoleculeRoot(): Promise<IssueId | undefined> {

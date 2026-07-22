@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { startDaemon, stopDaemon, daemonStatePath, globalRegistryPath } from './daemon.js'
-import { MANAGER_PROMPT, INITIAL_PROMPT } from '@fonagents/prompts'
+import { MANAGER_PROMPT, INITIAL_PROMPT, OVERSEER_SYSTEM_PROMPT } from '@fonagents/prompts'
 import { spawn } from 'child_process'
 import { exec } from 'child_process'
 import fs from 'fs'
@@ -57,6 +57,25 @@ permission:
 
 ${prompt}`
   fs.writeFileSync(path.join(agentsDir, 'fonagents-manager.md'), content, 'utf8')
+}
+
+function writeOverseerAgentFile(projectDir: string, prompt: string): void {
+  const agentsDir = path.join(projectDir, '.opencode', 'agents')
+  fs.mkdirSync(agentsDir, { recursive: true })
+  const content = `---
+description: fonagents Overseer — automatically reviews board and dispatches work after workers complete
+mode: primary
+model: opencode-go/mimo-v2.5-pro
+permission:
+  task: allow
+  webfetch: allow
+  websearch: allow
+  skill: allow
+  fonagents_*: allow
+---
+
+${prompt}`
+  fs.writeFileSync(path.join(agentsDir, 'fonagents-overseer.md'), content, 'utf8')
 }
 
 async function readDaemonState(): Promise<{ port: number; projectDir: string } | null> {
@@ -226,6 +245,7 @@ async function runDaemon(): Promise<void> {
 
   const managerPrompt = MANAGER_PROMPT.replace(/PORT/g, String(handle.port))
   writeAgentFile(projectDir, managerPrompt)
+  writeOverseerAgentFile(projectDir, OVERSEER_SYSTEM_PROMPT)
 
   const agentProc = launchAgent(runtimeId, INITIAL_PROMPT, handle.mcpConfigPath, projectDir, managerPrompt)
 

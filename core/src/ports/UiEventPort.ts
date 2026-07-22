@@ -1,6 +1,7 @@
 import type {
   Gate,
   GateId,
+  Issue,
   IssueId,
   MoleculeId,
   WorkerHandle,
@@ -15,7 +16,7 @@ export interface UiEventPort {
 export type UiEvent =
   | { type: 'worker_started'; worker: WorkerHandle }
   | { type: 'worker_output'; workerId: WorkerId; delta: string }
-  | { type: 'worker_status'; workerId: WorkerId; status: WorkerStatus; exitCode?: number }
+  | { type: 'worker_status'; workerId: WorkerId; issueId: IssueId; status: WorkerStatus; exitCode?: number }
   | { type: 'gate_opened'; gate: Gate }
   | { type: 'gate_resolved'; gateId: GateId }
   | { type: 'molecule_poured'; moleculeId: MoleculeId; formulaName: string }

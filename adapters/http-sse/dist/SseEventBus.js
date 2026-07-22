@@ -1,11 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SseEventBus = void 0;
-// Implements UiEventPort by broadcasting events to all connected SSE clients.
-// Each client is an Express Response with SSE headers already set.
-// The terminal adapter (future) would write to stdout; the discord adapter
-// would post messages — same UiEventPort interface, different transport.
+const events_1 = require("events");
 class SseEventBus {
+    events = new events_1.EventEmitter();
     clients = new Set();
     addClient(res) {
         this.clients.add(res);
@@ -14,6 +12,9 @@ class SseEventBus {
         this.clients.delete(res);
     }
     emit(event) {
+        // Emit to local listeners (like Overseer)
+        this.events.emit('ui-event', event);
+        // Broadcast to SSE clients
         const data = `data: ${JSON.stringify(event)}\n\n`;
         for (const client of this.clients) {
             try {

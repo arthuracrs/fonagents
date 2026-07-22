@@ -259,12 +259,93 @@ var require_manager_initial = __commonJS({
   }
 });
 
+// ../prompts/dist/overseer-system.js
+var require_overseer_system = __commonJS({
+  "../prompts/dist/overseer-system.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.OVERSEER_SYSTEM_PROMPT = void 0;
+    exports2.OVERSEER_SYSTEM_PROMPT = `You are a fonagents Overseer. You automatically review the board after workers complete and dispatch new work.
+
+Available MCP tools (fonagents):
+
+tool  | decompose
+---   | ---
+input | formulaName (string, required), vars (object, optional)
+desc  | Decompose a request into a swarm molecule of child issues using a beads formula.
+
+tool  | dispatchWorker
+---   | ---
+input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
+desc  | Dispatch a one-shot coding agent onto a ready child issue.
+
+tool  | listReady
+---   | ---
+input | moleculeId (string, optional)
+desc  | List claimable/ready work, optionally scoped to a molecule.
+
+tool  | workerStatus
+---   | ---
+input | workerId (string, optional), issueId (string, optional)
+desc  | Inspect worker progress by worker id or issue id.
+
+tool  | escalate
+---   | ---
+input | reason (string, required), issueId (string, optional)
+desc  | Escalate to the human operator. Creates a human gate and blocks until resolved via the UI.
+
+tool  | recordProgress
+---   | ---
+input | issueId (string, required), body (string, required)
+desc  | Record a progress comment on an issue (audit trail).
+
+tool  | completeIssue
+---   | ---
+input | issueId (string, required), reason (string, optional)
+desc  | Mark an issue as complete.
+
+Workflow:
+1. Complete any done issues: use completeIssue to mark them done.
+2. Check ready work: use listReady to see what is claimable.
+3. Check active workers: use workerStatus to see what is running.
+4. Dispatch workers on ready issues: use dispatchWorker.
+5. If no ready work and no active workers, exit \u2014 the molecule is stuck or complete.
+
+Rules:
+- NEVER execute issues yourself. You are an overseer, not a worker. Always use dispatchWorker to assign work.
+- Use bd show <id> --long to inspect issues when needed.
+- If nothing to do, exit immediately. Do not ask questions.
+`;
+  }
+});
+
+// ../prompts/dist/overseer-user.js
+var require_overseer_user = __commonJS({
+  "../prompts/dist/overseer-user.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.buildOverseerPrompt = buildOverseerPrompt;
+    function buildOverseerPrompt(completedIssues, failedIssues) {
+      const parts = [];
+      if (completedIssues.length > 0) {
+        parts.push(`Workers for these issues just completed: ${completedIssues.join(", ")}`);
+      }
+      if (failedIssues.length > 0) {
+        parts.push(`Workers for these issues failed: ${failedIssues.join(", ")}`);
+      }
+      parts.push("");
+      parts.push("Review the board state and dispatch ready work.");
+      return parts.join("\n");
+    }
+  }
+});
+
 // ../prompts/dist/index.js
 var require_dist = __commonJS({
   "../prompts/dist/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.INITIAL_PROMPT = exports2.buildWorkerSystemPrompt = exports2.DEFAULT_PROMPT = exports2.MANAGER_PROMPT = void 0;
+    exports2.buildOverseerPrompt = exports2.OVERSEER_SYSTEM_PROMPT = exports2.INITIAL_PROMPT = exports2.buildWorkerSystemPrompt = exports2.DEFAULT_PROMPT = exports2.MANAGER_PROMPT = void 0;
     var manager_system_js_1 = require_manager_system();
     Object.defineProperty(exports2, "MANAGER_PROMPT", { enumerable: true, get: function() {
       return manager_system_js_1.MANAGER_PROMPT;
@@ -280,6 +361,14 @@ var require_dist = __commonJS({
     var manager_initial_js_1 = require_manager_initial();
     Object.defineProperty(exports2, "INITIAL_PROMPT", { enumerable: true, get: function() {
       return manager_initial_js_1.INITIAL_PROMPT;
+    } });
+    var overseer_system_js_1 = require_overseer_system();
+    Object.defineProperty(exports2, "OVERSEER_SYSTEM_PROMPT", { enumerable: true, get: function() {
+      return overseer_system_js_1.OVERSEER_SYSTEM_PROMPT;
+    } });
+    var overseer_user_js_1 = require_overseer_user();
+    Object.defineProperty(exports2, "buildOverseerPrompt", { enumerable: true, get: function() {
+      return overseer_user_js_1.buildOverseerPrompt;
     } });
   }
 });
@@ -452,10 +541,13 @@ var require_Orchestrator = __commonJS({
       forwardWorkerEvent(workerId, ev) {
         if (ev.type === "text")
           this.emit({ type: "worker_output", workerId, delta: ev.delta });
-        else if (ev.type === "done")
-          this.emit({ type: "worker_status", workerId, status: "completed", exitCode: ev.exitCode });
-        else if (ev.type === "failed")
-          this.emit({ type: "worker_status", workerId, status: "failed", exitCode: ev.exitCode });
+        else if (ev.type === "done") {
+          const worker = this.runtime.getWorker(workerId);
+          this.emit({ type: "worker_status", workerId, issueId: worker?.issueId ?? "", status: "completed", exitCode: ev.exitCode });
+        } else if (ev.type === "failed") {
+          const worker = this.runtime.getWorker(workerId);
+          this.emit({ type: "worker_status", workerId, issueId: worker?.issueId ?? "", status: "failed", exitCode: ev.exitCode });
+        }
       }
       async currentMoleculeRoot() {
         if (!this.currentMoleculeId)
@@ -626,7 +718,7 @@ var require_BeadsAdapter = __commonJS({
     var path_1 = __importDefault(require("path"));
     var fs_1 = __importDefault(require("fs"));
     var mapper_js_1 = require_mapper();
-    var execFileAsync = (0, util_1.promisify)(child_process_1.execFile);
+    var execFileAsync2 = (0, util_1.promisify)(child_process_1.execFile);
     var BeadsAdapter2 = class {
       bin;
       projectDir;
@@ -827,7 +919,7 @@ var require_BeadsAdapter = __commonJS({
       async run(args, actorOverride) {
         const actor = actorOverride ?? this.actor;
         const finalArgs = actor ? ["--actor", actor, ...args] : args;
-        const { stdout } = await execFileAsync(this.bin, finalArgs, {
+        const { stdout } = await execFileAsync2(this.bin, finalArgs, {
           cwd: this.projectDir,
           maxBuffer: 10 * 1024 * 1024
         });
@@ -20241,14 +20333,14 @@ var require_etag = __commonJS({
   "../node_modules/etag/index.js"(exports2, module2) {
     "use strict";
     module2.exports = etag;
-    var crypto = require("crypto");
+    var crypto2 = require("crypto");
     var Stats = require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash = crypto.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash = crypto2.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash + '"';
     }
@@ -23735,17 +23827,17 @@ var require_content_disposition = __commonJS({
 // ../node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "../node_modules/cookie-signature/index.js"(exports2) {
-    var crypto = require("crypto");
+    var crypto2 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto2.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports2.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto2.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -25420,10 +25512,10 @@ var require_HttpSseAdapter = __commonJS({
       app.post("/api/init", wrap(async (req, res) => {
         const dir = req.body?.dir ?? config.projectDir;
         const bdPath = process.env.BD_PATH ?? "bd";
-        const { execFile } = require("child_process");
-        const { promisify } = require("util");
-        const execFileAsync = promisify(execFile);
-        const { stdout } = await execFileAsync(bdPath, ["init"], { cwd: dir });
+        const { execFile: execFile2 } = require("child_process");
+        const { promisify: promisify2 } = require("util");
+        const execFileAsync2 = promisify2(execFile2);
+        const { stdout } = await execFileAsync2(bdPath, ["init"], { cwd: dir });
         res.json({ ok: true, output: stdout });
       }));
       app.post("/api/gates/:id/resolve", wrap(async (req, res) => {
@@ -25608,7 +25700,9 @@ var require_SseEventBus = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SseEventBus = void 0;
+    var events_1 = require("events");
     var SseEventBus2 = class {
+      events = new events_1.EventEmitter();
       clients = /* @__PURE__ */ new Set();
       addClient(res) {
         this.clients.add(res);
@@ -25617,6 +25711,7 @@ var require_SseEventBus = __commonJS({
         this.clients.delete(res);
       }
       emit(event) {
+        this.events.emit("ui-event", event);
         const data = `data: ${JSON.stringify(event)}
 
 `;
@@ -25719,12 +25814,205 @@ var import_core = __toESM(require_dist2());
 var import_beads_adapter = __toESM(require_dist3());
 var import_anagent_adapter = __toESM(require_dist4());
 var import_http_sse_adapter = __toESM(require_dist8());
+
+// src/overseer.ts
+var import_child_process = require("child_process");
+var import_util = require("util");
+var import_crypto = __toESM(require("crypto"));
+var execFileAsync = (0, import_util.promisify)(import_child_process.execFile);
+var sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+var Overseer = class {
+  constructor(eventBus, config, projectDir) {
+    this.eventBus = eventBus;
+    this.config = config;
+    this.projectDir = projectDir;
+  }
+  queue = [];
+  active = /* @__PURE__ */ new Map();
+  debounceTimer = null;
+  isProcessing = false;
+  start() {
+    if (!this.config.enabled) {
+      console.log("Overseer: disabled");
+      return;
+    }
+    console.log(`Overseer: started (mode=${this.config.mode}, maxConcurrent=${this.config.maxConcurrent})`);
+    this.eventBus.addListener("ui-event", (event) => {
+      if (event.type === "worker_status") {
+        this.handleWorkerEvent(event);
+      }
+    });
+  }
+  stop() {
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
+    for (const handle of this.active.values()) {
+      (0, import_child_process.execFile)("tmux", ["kill-session", "-t", handle.sessionName], () => {
+      });
+    }
+    this.active.clear();
+  }
+  handleWorkerEvent(event) {
+    const { workerId, status } = event;
+    if (status !== "completed" && status !== "failed") return;
+    const queued = {
+      type: status === "completed" ? "done" : "failed",
+      issueId: event.issueId || "",
+      workerId
+    };
+    if (this.config.mode === "queue") {
+      this.enqueue(queued);
+    } else {
+      this.batch(queued);
+    }
+  }
+  // ── Queue mode ───────────────────────────────────────────────────────────────
+  enqueue(event) {
+    this.queue.push(event);
+    this.processQueue();
+  }
+  async processQueue() {
+    if (this.isProcessing) return;
+    if (this.queue.length === 0) return;
+    if (this.active.size >= this.config.maxConcurrent) return;
+    this.isProcessing = true;
+    const event = this.queue.shift();
+    await this.runOverseer([event]);
+  }
+  // ── Batch mode ───────────────────────────────────────────────────────────────
+  batch(event) {
+    this.queue.push(event);
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+    }
+    this.debounceTimer = setTimeout(() => {
+      this.processBatch();
+    }, this.config.debounceMs);
+  }
+  async processBatch() {
+    if (this.queue.length === 0) return;
+    if (this.active.size >= this.config.maxConcurrent) return;
+    const events = [...this.queue];
+    this.queue = [];
+    await this.runOverseer(events);
+  }
+  // ── Overseer spawning ────────────────────────────────────────────────────────
+  async runOverseer(events) {
+    const completedIssues = events.filter((e) => e.type === "done").map((e) => e.issueId).filter(Boolean);
+    const failedIssues = events.filter((e) => e.type === "failed").map((e) => e.issueId).filter(Boolean);
+    const promptParts = [];
+    if (completedIssues.length > 0) {
+      promptParts.push(`Workers for these issues just completed: ${completedIssues.join(", ")}`);
+    }
+    if (failedIssues.length > 0) {
+      promptParts.push(`Workers for these issues failed: ${failedIssues.join(", ")}`);
+    }
+    promptParts.push("", "Review the board state and dispatch ready work.");
+    const prompt = promptParts.join("\n");
+    const id = import_crypto.default.randomBytes(6).toString("hex");
+    const sessionName = `overseer-${id}`;
+    try {
+      await execFileAsync("tmux", [
+        "new-session",
+        "-d",
+        "-s",
+        sessionName,
+        "-x",
+        "220",
+        "-y",
+        "50",
+        "-c",
+        this.projectDir,
+        "opencode",
+        "--agent",
+        "fonagents-overseer",
+        "--prompt",
+        prompt
+      ]);
+      await execFileAsync("tmux", [
+        "set-option",
+        "-t",
+        sessionName,
+        "remain-on-exit",
+        "on"
+      ]).catch(() => {
+      });
+      const handle = {
+        id,
+        sessionName,
+        status: "running",
+        startedAt: Date.now()
+      };
+      this.active.set(id, handle);
+      console.log(`Overseer: spawned ${sessionName} for ${events.length} event(s)`);
+      this.pollOverseer(handle).catch((err) => {
+        console.error(`Overseer: ${sessionName} polling error:`, err);
+        this.active.delete(id);
+        this.onOverseerDone();
+      });
+    } catch (err) {
+      console.error(`Overseer: failed to spawn ${sessionName}:`, err);
+    }
+  }
+  async pollOverseer(handle) {
+    const deadline = Date.now() + this.config.timeoutSec * 1e3;
+    while (Date.now() < deadline) {
+      await sleep(5e3);
+      try {
+        const { stdout } = await execFileAsync("tmux", [
+          "display-message",
+          "-p",
+          "-t",
+          handle.sessionName,
+          "#{pane_dead}:#{pane_dead_status}"
+        ]);
+        const [dead, statusStr] = stdout.trim().split(":");
+        if (dead === "1") {
+          handle.status = "completed";
+          handle.finishedAt = Date.now();
+          this.active.delete(handle.id);
+          console.log(`Overseer: ${handle.sessionName} exited (code: ${statusStr})`);
+          this.onOverseerDone();
+          return;
+        }
+      } catch {
+        handle.status = "completed";
+        handle.finishedAt = Date.now();
+        this.active.delete(handle.id);
+        console.log(`Overseer: ${handle.sessionName} session gone`);
+        this.onOverseerDone();
+        return;
+      }
+    }
+    handle.status = "timed_out";
+    handle.finishedAt = Date.now();
+    console.log(`Overseer: ${handle.sessionName} timed out after ${this.config.timeoutSec}s`);
+    await execFileAsync("tmux", ["kill-session", "-t", handle.sessionName]).catch(() => {
+    });
+    this.active.delete(handle.id);
+    this.onOverseerDone();
+  }
+  onOverseerDone() {
+    if (this.config.mode === "queue") {
+      this.isProcessing = false;
+      this.processQueue();
+    }
+    if (this.config.mode === "batch" && this.queue.length > 0) {
+      this.processBatch();
+    }
+  }
+};
+
+// src/daemon.ts
 var import_express = __toESM(require_express2());
 var import_path = __toESM(require("path"));
 var import_fs = __toESM(require("fs"));
 var import_http = __toESM(require("http"));
 var _server = null;
 var _projectDir = null;
+var _overseer = null;
 function daemonStatePath(projectDir) {
   return import_path.default.join(projectDir, ".fonagents", "daemon.json");
 }
@@ -25841,6 +26129,15 @@ async function startDaemon(opts = {}) {
     managerRuntimeId: managerRuntime
   };
   const orchestrator = new import_core.Orchestrator(tracker, runtime, eventBus, orchestratorConfig);
+  const overseerConfig = {
+    enabled: process.env.FONAGENTS_SUPERVISION_ENABLED !== "false",
+    mode: process.env.FONAGENTS_SUPERVISION_MODE || "queue",
+    debounceMs: parseInt(process.env.FONAGENTS_SUPERVISION_DEBOUNCE_MS || "5000", 10),
+    maxConcurrent: parseInt(process.env.FONAGENTS_SUPERVISION_MAX_CONCURRENT || "5", 10),
+    timeoutSec: parseInt(process.env.FONAGENTS_SUPERVISION_TIMEOUT_SEC || "600", 10)
+  };
+  _overseer = new Overseer(eventBus.events, overseerConfig, projectDir);
+  _overseer.start();
   const { app } = (0, import_http_sse_adapter.createHttpSseApp)(orchestrator, orchestrator, eventBus, { port, projectDir });
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", port, projectDir });
@@ -25874,6 +26171,10 @@ async function startDaemon(opts = {}) {
   });
 }
 function stopDaemon() {
+  if (_overseer) {
+    _overseer.stop();
+    _overseer = null;
+  }
   if (_server) {
     const s = _server;
     _server = null;
@@ -25888,8 +26189,8 @@ function stopDaemon() {
 
 // src/cli.ts
 var import_prompts = __toESM(require_dist());
-var import_child_process = require("child_process");
 var import_child_process2 = require("child_process");
+var import_child_process3 = require("child_process");
 var import_fs2 = __toESM(require("fs"));
 var import_net = __toESM(require("net"));
 var import_path2 = __toESM(require("path"));
@@ -25907,7 +26208,7 @@ function findFreePort(start) {
 }
 function openBrowser(url) {
   const cmd = process.platform === "darwin" ? `open "${url}"` : process.platform === "win32" ? `start "" "${url}"` : `xdg-open "${url}"`;
-  (0, import_child_process2.exec)(cmd);
+  (0, import_child_process3.exec)(cmd);
 }
 function parseArgs() {
   const argv = process.argv.slice(2);
@@ -25935,6 +26236,24 @@ permission:
 
 ${prompt}`;
   import_fs2.default.writeFileSync(import_path2.default.join(agentsDir, "fonagents-manager.md"), content, "utf8");
+}
+function writeOverseerAgentFile(projectDir, prompt) {
+  const agentsDir = import_path2.default.join(projectDir, ".opencode", "agents");
+  import_fs2.default.mkdirSync(agentsDir, { recursive: true });
+  const content = `---
+description: fonagents Overseer \u2014 automatically reviews board and dispatches work after workers complete
+mode: primary
+model: opencode-go/mimo-v2.5-pro
+permission:
+  task: allow
+  webfetch: allow
+  websearch: allow
+  skill: allow
+  fonagents_*: allow
+---
+
+${prompt}`;
+  import_fs2.default.writeFileSync(import_path2.default.join(agentsDir, "fonagents-overseer.md"), content, "utf8");
 }
 async function readDaemonState() {
   const statePath = daemonStatePath(process.cwd());
@@ -26051,7 +26370,7 @@ async function runTail(workerId) {
   attachTmux(worker.tmuxSession);
 }
 function attachTmux(session) {
-  (0, import_child_process2.exec)(`tmux has-session -t ${session}`, (err) => {
+  (0, import_child_process3.exec)(`tmux has-session -t ${session}`, (err) => {
     if (err) {
       console.error(`
 tmux session "${session}" has ended.`);
@@ -26061,7 +26380,7 @@ tmux session "${session}" has ended.`);
     console.log(`
 Attaching to tmux session: ${session}`);
     console.log("(Detach with Ctrl+B, D)\n");
-    const proc = (0, import_child_process.spawn)("tmux", ["attach-session", "-t", session], { stdio: "inherit" });
+    const proc = (0, import_child_process2.spawn)("tmux", ["attach-session", "-t", session], { stdio: "inherit" });
     proc.on("exit", () => process.exit(0));
   });
 }
@@ -26090,6 +26409,7 @@ Manager mode \u2014 starting ${runtimeId} agent...`);
 `);
   const managerPrompt = import_prompts.MANAGER_PROMPT.replace(/PORT/g, String(handle.port));
   writeAgentFile(projectDir, managerPrompt);
+  writeOverseerAgentFile(projectDir, import_prompts.OVERSEER_SYSTEM_PROMPT);
   const agentProc = launchAgent(runtimeId, import_prompts.INITIAL_PROMPT, handle.mcpConfigPath, projectDir, managerPrompt);
   const onSigTerm = () => {
     agentProc.kill("SIGTERM");
@@ -26108,7 +26428,7 @@ Agent exited (code: ${exitCode ?? "error"}). Shutting down...`);
 function launchAgent(runtimeId, initialPrompt, mcpConfigPath, projectDir, systemPrompt) {
   switch (runtimeId) {
     case "claude-code":
-      return (0, import_child_process.spawn)("claude", [
+      return (0, import_child_process2.spawn)("claude", [
         "--dangerously-skip-permissions",
         ...systemPrompt ? ["--system-prompt", systemPrompt] : [],
         "--mcp-config",
@@ -26117,7 +26437,7 @@ function launchAgent(runtimeId, initialPrompt, mcpConfigPath, projectDir, system
       ], { stdio: "inherit", cwd: projectDir });
     case "opencode":
     default:
-      return (0, import_child_process.spawn)("opencode", [
+      return (0, import_child_process2.spawn)("opencode", [
         "--agent",
         "fonagents-manager",
         "--prompt",

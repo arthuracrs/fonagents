@@ -11,12 +11,14 @@ const core_1 = require("@fonagents/core");
 const beads_adapter_1 = require("@fonagents/beads-adapter");
 const anagent_adapter_1 = require("@fonagents/anagent-adapter");
 const http_sse_adapter_1 = require("@fonagents/http-sse-adapter");
+const overseer_js_1 = require("./overseer.js");
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const http_1 = __importDefault(require("http"));
 let _server = null;
 let _projectDir = null;
+let _overseer = null;
 function daemonStatePath(projectDir) {
     return path_1.default.join(projectDir, '.fonagents', 'daemon.json');
 }
@@ -132,6 +134,15 @@ async function startDaemon(opts = {}) {
         managerRuntimeId: managerRuntime,
     };
     const orchestrator = new core_1.Orchestrator(tracker, runtime, eventBus, orchestratorConfig);
+    const overseerConfig = {
+        enabled: process.env.FONAGENTS_SUPERVISION_ENABLED !== 'false',
+        mode: process.env.FONAGENTS_SUPERVISION_MODE || 'queue',
+        debounceMs: parseInt(process.env.FONAGENTS_SUPERVISION_DEBOUNCE_MS || '5000', 10),
+        maxConcurrent: parseInt(process.env.FONAGENTS_SUPERVISION_MAX_CONCURRENT || '5', 10),
+        timeoutSec: parseInt(process.env.FONAGENTS_SUPERVISION_TIMEOUT_SEC || '600', 10),
+    };
+    _overseer = new overseer_js_1.Overseer(eventBus.events, overseerConfig, projectDir);
+    _overseer.start();
     const { app } = (0, http_sse_adapter_1.createHttpSseApp)(orchestrator, orchestrator, eventBus, { port, projectDir });
     app.get('/api/health', (_req, res) => {
         res.json({ status: 'ok', port, projectDir });
@@ -166,6 +177,10 @@ async function startDaemon(opts = {}) {
     });
 }
 function stopDaemon() {
+    if (_overseer) {
+        _overseer.stop();
+        _overseer = null;
+    }
     if (_server) {
         const s = _server;
         _server = null;

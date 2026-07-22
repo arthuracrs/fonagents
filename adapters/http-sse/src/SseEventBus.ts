@@ -1,11 +1,9 @@
+import { EventEmitter } from 'events'
 import type { Response } from 'express'
 import type { UiEvent, UiEventPort } from '@fonagents/core'
 
-// Implements UiEventPort by broadcasting events to all connected SSE clients.
-// Each client is an Express Response with SSE headers already set.
-// The terminal adapter (future) would write to stdout; the discord adapter
-// would post messages — same UiEventPort interface, different transport.
 export class SseEventBus implements UiEventPort {
+  readonly events = new EventEmitter()
   private readonly clients = new Set<Response>()
 
   addClient(res: Response): void {
@@ -17,6 +15,10 @@ export class SseEventBus implements UiEventPort {
   }
 
   emit(event: UiEvent): void {
+    // Emit to local listeners (like Overseer)
+    this.events.emit('ui-event', event)
+
+    // Broadcast to SSE clients
     const data = `data: ${JSON.stringify(event)}\n\n`
     for (const client of this.clients) {
       try {
