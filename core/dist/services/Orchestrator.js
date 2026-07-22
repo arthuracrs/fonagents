@@ -72,7 +72,7 @@ class Orchestrator {
             issueId: input.issueId,
             runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
             prompt: input.prompt ?? `Resolve ${input.issueId}: ${issue.title}`,
-            systemPrompt: (0, prompts_1.buildWorkerSystemPrompt)(input.issueId, issue.description ?? ''),
+            systemPrompt: (0, prompts_1.buildWorkerSystemPrompt)(input.issueId),
             mode: 'tmux',
             cwd: this.config.projectDir,
         };

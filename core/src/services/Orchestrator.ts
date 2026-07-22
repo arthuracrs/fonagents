@@ -114,7 +114,7 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
       issueId: input.issueId,
       runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
       prompt: input.prompt ?? `Resolve ${input.issueId}: ${issue.title}`,
-      systemPrompt: buildWorkerSystemPrompt(input.issueId, issue.description ?? ''),
+      systemPrompt: buildWorkerSystemPrompt(input.issueId),
       mode: 'tmux',
       cwd: this.config.projectDir,
     }

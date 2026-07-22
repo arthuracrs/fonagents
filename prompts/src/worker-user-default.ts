@@ -1,15 +1,14 @@
-export const DEFAULT_PROMPT = `Work on beads issue {id} (full context already prepended above). Complete the task using only the information available. Do not ask for more information.
+export const DEFAULT_PROMPT = `Work on beads issue {id}. Fetch its data with bd show before starting.
 
-Before starting work:
-1. Run: bd update {id} --actor agent --status in_progress
+Steps:
+1. Read the issue: bd show {id} --long
+2. Start work: bd update {id} --actor agent --status in_progress
+3. When done: bd comment {id} --actor agent "<summary of what was done and proof>"
+4. Close the issue: bd close {id} --reason "<brief reason>"
 
-If you need input from a human:
-1. Create a human gate: bd gate create {id} --type human --reason "<specific question or what you need>"
-2. Leave a comment with full context: bd comment {id} --actor agent "<what you need and why>"
+If you need human input:
+1. bd gate create {id} --type human --reason "<specific question>"
+2. bd comment {id} --actor agent "<context about what you need>"
 3. Stop working. The issue is now blocked on human response.
 
-When done:
-1. Run: bd comment {id} --actor agent "<brief summary of what was done and proof of completion>"
-2. Leave the issue open for review unless the user ask you to close.
-
-Important: write comments in plain text only — no Markdown syntax (no **bold**, \`code\`, \`\`\`, -, etc.). Use line breaks, spacing, and indentation to make them readable for humans.`
+Write comments in plain text only — no Markdown syntax. Use line breaks and indentation for readability.`

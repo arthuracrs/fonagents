@@ -220,21 +220,20 @@ var require_worker_user_default = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DEFAULT_PROMPT = void 0;
-    exports2.DEFAULT_PROMPT = `Work on beads issue {id} (full context already prepended above). Complete the task using only the information available. Do not ask for more information.
+    exports2.DEFAULT_PROMPT = `Work on beads issue {id}. Fetch its data with bd show before starting.
 
-Before starting work:
-1. Run: bd update {id} --actor agent --status in_progress
+Steps:
+1. Read the issue: bd show {id} --long
+2. Start work: bd update {id} --actor agent --status in_progress
+3. When done: bd comment {id} --actor agent "<summary of what was done and proof>"
+4. Close the issue: bd close {id} --reason "<brief reason>"
 
-If you need input from a human:
-1. Create a human gate: bd gate create {id} --type human --reason "<specific question or what you need>"
-2. Leave a comment with full context: bd comment {id} --actor agent "<what you need and why>"
+If you need human input:
+1. bd gate create {id} --type human --reason "<specific question>"
+2. bd comment {id} --actor agent "<context about what you need>"
 3. Stop working. The issue is now blocked on human response.
 
-When done:
-1. Run: bd comment {id} --actor agent "<brief summary of what was done and proof of completion>"
-2. Leave the issue open for review unless the user ask you to close.
-
-Important: write comments in plain text only \u2014 no Markdown syntax (no **bold**, \`code\`, \`\`\`, -, etc.). Use line breaks, spacing, and indentation to make them readable for humans.`;
+Write comments in plain text only \u2014 no Markdown syntax. Use line breaks and indentation for readability.`;
   }
 });
 
@@ -244,10 +243,8 @@ var require_worker_system = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.buildWorkerSystemPrompt = buildWorkerSystemPrompt;
-    function buildWorkerSystemPrompt(issueId, description) {
-      return `You are a worker agent executing beads issue ${issueId}.
-
-${description}`;
+    function buildWorkerSystemPrompt(issueId) {
+      return `You are a worker agent executing beads issue ${issueId}. Use \`bd show ${issueId} --long\` to view the full issue data including description, status, type, priority, labels, dependencies, and comments.`;
     }
   }
 });
@@ -398,7 +395,7 @@ var require_Orchestrator = __commonJS({
           issueId: input.issueId,
           runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
           prompt: input.prompt ?? `Resolve ${input.issueId}: ${issue.title}`,
-          systemPrompt: (0, prompts_1.buildWorkerSystemPrompt)(input.issueId, issue.description ?? ""),
+          systemPrompt: (0, prompts_1.buildWorkerSystemPrompt)(input.issueId),
           mode: "tmux",
           cwd: this.config.projectDir
         };
