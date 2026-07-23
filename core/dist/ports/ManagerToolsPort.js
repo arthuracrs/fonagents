@@ -76,5 +76,13 @@ exports.MANAGER_TOOL_SCHEMAS = [
             required: ['issueId'],
         },
     },
+    {
+        name: 'overseerStatus',
+        description: 'Get the overseer status — auto-dispatch supervisor that automatically dispatches workers after each worker completes.',
+        inputSchema: {
+            type: 'object',
+            properties: {},
+        },
+    },
 ];
 //# sourceMappingURL=ManagerToolsPort.js.map

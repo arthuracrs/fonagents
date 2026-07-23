@@ -21,9 +21,18 @@ export declare class Overseer {
     private active;
     private debounceTimer;
     private isProcessing;
+    private listener;
     constructor(eventBus: EventEmitter, config: OverseerConfig, projectDir: string);
     start(): void;
     stop(): void;
+    setEnabled(enabled: boolean): void;
+    getConfig(): OverseerConfig;
+    getStatus(): {
+        config: OverseerConfig;
+        activeOverseers: number;
+        queueLength: number;
+    };
+    private persistConfig;
     private handleWorkerEvent;
     private enqueue;
     private processQueue;

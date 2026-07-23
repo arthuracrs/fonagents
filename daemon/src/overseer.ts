@@ -2,6 +2,8 @@ import { EventEmitter } from 'events'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import crypto from 'crypto'
+import fs from 'fs'
+import path from 'path'
 
 const execFileAsync = promisify(execFile)
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -33,6 +35,7 @@ export class Overseer {
   private active: Map<string, OverseerHandle> = new Map()
   private debounceTimer: NodeJS.Timeout | null = null
   private isProcessing = false
+  private listener: ((event: any) => void) | null = null
 
   constructor(
     private eventBus: EventEmitter,
@@ -41,21 +44,25 @@ export class Overseer {
   ) {}
 
   start(): void {
-    if (!this.config.enabled) {
-      console.log('Overseer: disabled')
-      return
-    }
-
-    console.log(`Overseer: started (mode=${this.config.mode}, maxConcurrent=${this.config.maxConcurrent})`)
-
-    this.eventBus.addListener('ui-event', (event: any) => {
+    this.listener = (event: any) => {
       if (event.type === 'worker_status') {
         this.handleWorkerEvent(event)
       }
-    })
+    }
+    this.eventBus.addListener('ui-event', this.listener)
+
+    if (this.config.enabled) {
+      console.log(`Overseer: started (mode=${this.config.mode}, maxConcurrent=${this.config.maxConcurrent})`)
+    } else {
+      console.log('Overseer: disabled')
+    }
   }
 
   stop(): void {
+    if (this.listener) {
+      this.eventBus.removeListener('ui-event', this.listener)
+      this.listener = null
+    }
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer)
       this.debounceTimer = null
@@ -64,6 +71,34 @@ export class Overseer {
       execFile('tmux', ['kill-session', '-t', handle.sessionName], () => {})
     }
     this.active.clear()
+  }
+
+  setEnabled(enabled: boolean): void {
+    this.config.enabled = enabled
+    this.persistConfig()
+    console.log(`Overseer: ${enabled ? 'enabled' : 'disabled'}`)
+  }
+
+  getConfig(): OverseerConfig {
+    return { ...this.config }
+  }
+
+  getStatus(): { config: OverseerConfig; activeOverseers: number; queueLength: number } {
+    return {
+      config: { ...this.config },
+      activeOverseers: this.active.size,
+      queueLength: this.queue.length,
+    }
+  }
+
+  private persistConfig(): void {
+    const configPath = path.join(this.projectDir, '.fonagents', 'overseer.json')
+    try {
+      fs.mkdirSync(path.dirname(configPath), { recursive: true })
+      fs.writeFileSync(configPath, JSON.stringify(this.config, null, 2), 'utf8')
+    } catch (err) {
+      console.error('Overseer: failed to persist config:', err)
+    }
   }
 
   private handleWorkerEvent(event: any): void {

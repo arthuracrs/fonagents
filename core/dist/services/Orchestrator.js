@@ -125,6 +125,18 @@ class Orchestrator {
         await this.tracker.closeIssue(input.issueId, input.reason);
         this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'closed' });
     }
+    async overseerStatus() {
+        return {
+            enabled: this.config.overseer?.enabled ?? true,
+            mode: this.config.overseer?.mode ?? 'queue',
+            activeOverseers: 0,
+            queueLength: 0,
+        };
+    }
+    // Update overseer config at runtime (called by daemon after UI toggle).
+    setOverseerConfig(config) {
+        this.config.overseer = config;
+    }
     // ── Helpers ────────────────────────────────────────────────────────────────────
     forwardWorkerEvent(workerId, ev) {
         if (ev.type === 'text')

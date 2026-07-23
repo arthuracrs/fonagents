@@ -7,6 +7,10 @@ import type { UiEventPort } from '../ports/UiEventPort.js';
 export interface OrchestratorConfig {
     projectDir: string;
     managerRuntimeId?: string;
+    overseer?: {
+        enabled: boolean;
+        mode: string;
+    };
 }
 export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
     private readonly tracker;
@@ -81,6 +85,16 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
         issueId: IssueId;
         reason?: string;
     }): Promise<void>;
+    overseerStatus(): Promise<{
+        enabled: boolean;
+        mode: string;
+        activeOverseers: number;
+        queueLength: number;
+    }>;
+    setOverseerConfig(config: {
+        enabled: boolean;
+        mode: string;
+    }): void;
     private forwardWorkerEvent;
     private currentMoleculeRoot;
     private emit;

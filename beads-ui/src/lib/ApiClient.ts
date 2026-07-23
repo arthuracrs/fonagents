@@ -1,4 +1,4 @@
-import type { Issue, Stats, AgentExecution, AgentTrigger, AgentRuntime, Formula, UiEvent, Gate } from "../types";
+import type { Issue, Stats, AgentExecution, AgentTrigger, AgentRuntime, Formula, UiEvent, Gate, OverseerStatus } from "../types";
 
 class HttpClient {
   constructor(private readonly base: string) {}
@@ -211,6 +211,14 @@ export class ApiClient {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ dir }),
     });
+  }
+
+  overseer(): Promise<OverseerStatus> {
+    return this.http.request<OverseerStatus>("/overseer");
+  }
+
+  overseerToggle(): Promise<{ enabled: boolean }> {
+    return this.http.request<{ enabled: boolean }>("/overseer/toggle", { method: "POST" });
   }
 
   subscribeEvents(onEvent: (event: UiEvent) => void): () => void {

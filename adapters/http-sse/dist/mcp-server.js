@@ -146,6 +146,14 @@ var require_ManagerToolsPort = __commonJS({
           properties: { issueId: { type: "string" }, reason: { type: "string" } },
           required: ["issueId"]
         }
+      },
+      {
+        name: "overseerStatus",
+        description: "Get the overseer status \u2014 auto-dispatch supervisor that automatically dispatches workers after each worker completes.",
+        inputSchema: {
+          type: "object",
+          properties: {}
+        }
       }
     ];
   }
@@ -196,6 +204,11 @@ tool  | completeIssue
 input | issueId (string, required), reason (string, optional)
 desc  | Mark an issue as complete.
 
+tool  | overseerStatus
+---   | ---
+input | (none)
+desc  | Get the overseer status \u2014 auto-dispatch supervisor state.
+
 Workflow:
 1. When the user gives a high-level request, use \`decompose\` to break it into issues with a beads formula.
 2. Use \`listReady\` to see available work.
@@ -204,6 +217,7 @@ Workflow:
 5. Record updates with \`recordProgress\`.
 6. Mark completed issues with \`completeIssue\`.
 7. Use \`escalate\` when you need human input or approval.
+8. Use \`overseerStatus\` to check if the auto-dispatch overseer is running. If the user asks about automation or what is orchestrating workers, check the overseer status and report it.
 
 Rules:
 - NEVER execute issues yourself. You are a manager, not a worker. Always use \`dispatchWorker\` to assign work to a coding agent.
@@ -536,6 +550,18 @@ var require_Orchestrator = __commonJS({
       async completeIssue(input) {
         await this.tracker.closeIssue(input.issueId, input.reason);
         this.emit({ type: "issue_changed", issueId: input.issueId, change: "closed" });
+      }
+      async overseerStatus() {
+        return {
+          enabled: this.config.overseer?.enabled ?? true,
+          mode: this.config.overseer?.mode ?? "queue",
+          activeOverseers: 0,
+          queueLength: 0
+        };
+      }
+      // Update overseer config at runtime (called by daemon after UI toggle).
+      setOverseerConfig(config) {
+        this.config.overseer = config;
       }
       // ── Helpers ────────────────────────────────────────────────────────────────────
       forwardWorkerEvent(workerId, ev) {

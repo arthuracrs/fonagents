@@ -44,6 +44,14 @@ export interface ManagerToolsPort {
 
   // Mark an issue as complete. Distinct from UiCommandPort.closeIssue.
   completeIssue(input: { issueId: IssueId; reason?: string }): Promise<void>
+
+  // Get the overseer status (auto-dispatch supervisor).
+  overseerStatus(): Promise<{
+    enabled: boolean
+    mode: string
+    activeOverseers: number
+    queueLength: number
+  }>
 }
 
 // Tool schemas exported for the MCP adapter to register. Keeping them here means
@@ -127,6 +135,14 @@ export const MANAGER_TOOL_SCHEMAS: ToolSchema[] = [
       type: 'object',
       properties: { issueId: { type: 'string' }, reason: { type: 'string' } },
       required: ['issueId'],
+    },
+  },
+  {
+    name: 'overseerStatus',
+    description: 'Get the overseer status — auto-dispatch supervisor that automatically dispatches workers after each worker completes.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
     },
   },
 ]

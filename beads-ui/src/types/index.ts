@@ -111,6 +111,20 @@ export interface Gate {
   resolvedAt?: string;
 }
 
+// ── Overseer (auto-dispatch supervisor) ─────────────────────────────────────────
+
+export interface OverseerStatus {
+  config: {
+    enabled: boolean;
+    mode: string;
+    debounceMs: number;
+    maxConcurrent: number;
+    timeoutSec: number;
+  };
+  activeOverseers: number;
+  queueLength: number;
+}
+
 // ── SSE events from the daemon ────────────────────────────────────────────────
 
 export type UiEvent =

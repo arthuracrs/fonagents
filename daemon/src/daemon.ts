@@ -149,13 +149,6 @@ export async function startDaemon(opts: DaemonConfig = {}): Promise<DaemonHandle
     cwd: projectDir,
   })
 
-  const orchestratorConfig: OrchestratorConfig = {
-    projectDir,
-    managerRuntimeId: managerRuntime,
-  }
-
-  const orchestrator = new Orchestrator(tracker, runtime, eventBus, orchestratorConfig)
-
   const overseerConfig: OverseerConfig = {
     enabled: process.env.FONAGENTS_SUPERVISION_ENABLED !== 'false',
     mode: (process.env.FONAGENTS_SUPERVISION_MODE as 'queue' | 'batch') || 'queue',
@@ -164,10 +157,40 @@ export async function startDaemon(opts: DaemonConfig = {}): Promise<DaemonHandle
     timeoutSec: parseInt(process.env.FONAGENTS_SUPERVISION_TIMEOUT_SEC || '600', 10),
   }
 
+  const orchestratorConfig: OrchestratorConfig = {
+    projectDir,
+    managerRuntimeId: managerRuntime,
+    overseer: { enabled: overseerConfig.enabled, mode: overseerConfig.mode },
+  }
+
+  const orchestrator = new Orchestrator(tracker, runtime, eventBus, orchestratorConfig)
+
   _overseer = new Overseer(eventBus.events, overseerConfig, projectDir)
   _overseer.start()
 
   const { app } = createHttpSseApp(orchestrator, orchestrator, eventBus, { port, projectDir })
+
+  // ── Overseer API ──────────────────────────────────────────────────────────────
+  app.get('/api/overseer', (_req, res) => {
+    try {
+      const status = _overseer!.getStatus()
+      res.json(status)
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message })
+    }
+  })
+
+  app.post('/api/overseer/toggle', (_req, res) => {
+    try {
+      const current = _overseer!.getConfig()
+      const enabled = !current.enabled
+      _overseer!.setEnabled(enabled)
+      orchestrator.setOverseerConfig({ enabled, mode: current.mode })
+      res.json({ enabled })
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message })
+    }
+  })
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', port, projectDir })

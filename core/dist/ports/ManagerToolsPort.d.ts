@@ -43,6 +43,12 @@ export interface ManagerToolsPort {
         issueId: IssueId;
         reason?: string;
     }): Promise<void>;
+    overseerStatus(): Promise<{
+        enabled: boolean;
+        mode: string;
+        activeOverseers: number;
+        queueLength: number;
+    }>;
 }
 export interface ToolSchema {
     name: keyof ManagerToolsPort;

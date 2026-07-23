@@ -29,6 +29,7 @@ const DEFAULT_MANAGER_RUNTIME = 'opencode'
 export interface OrchestratorConfig {
   projectDir: string
   managerRuntimeId?: string
+  overseer?: { enabled: boolean; mode: string }
 }
 
 export class Orchestrator implements UiCommandPort, ManagerToolsPort {
@@ -172,6 +173,20 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
   async completeIssue(input: { issueId: IssueId; reason?: string }): Promise<void> {
     await this.tracker.closeIssue(input.issueId, input.reason)
     this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'closed' })
+  }
+
+  async overseerStatus(): Promise<{ enabled: boolean; mode: string; activeOverseers: number; queueLength: number }> {
+    return {
+      enabled: this.config.overseer?.enabled ?? true,
+      mode: this.config.overseer?.mode ?? 'queue',
+      activeOverseers: 0,
+      queueLength: 0,
+    }
+  }
+
+  // Update overseer config at runtime (called by daemon after UI toggle).
+  setOverseerConfig(config: { enabled: boolean; mode: string }): void {
+    this.config.overseer = config
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────────

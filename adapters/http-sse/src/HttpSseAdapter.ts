@@ -290,6 +290,8 @@ async function executeManagerTool(
       return tools.recordProgress(args as { issueId: string; body: string })
     case 'completeIssue':
       return tools.completeIssue(args as { issueId: string; reason?: string })
+    case 'overseerStatus':
+      return tools.overseerStatus()
     default:
       throw new Error(`Unknown tool: ${name}`)
   }
