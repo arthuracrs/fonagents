@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { startDaemon, stopDaemon, daemonStatePath, globalRegistryPath } from './daemon.js'
-import { MANAGER_PROMPT, INITIAL_PROMPT, OVERSEER_SYSTEM_PROMPT } from '@fonagents/prompts'
+import { MANAGER_PROMPT, INITIAL_PROMPT, OVERSEER_SYSTEM_PROMPT } from './prompts/index.js'
 import { spawn } from 'child_process'
 import { exec } from 'child_process'
 import fs from 'fs'
