@@ -25473,7 +25473,19 @@ var require_HttpSseAdapter = __commonJS({
       }));
       app.get("/api/graph", wrap(async (_req, res) => {
         const issues = await command.listIssues();
-        res.json({ issues });
+        const issuesWithDeps = await Promise.all(issues.map(async (issue) => {
+          try {
+            const rawDeps = await command.listDependencies(issue.id);
+            const deps = rawDeps.map((dep) => ({
+              id: dep.fromId === issue.id ? dep.toId : dep.fromId,
+              dep_type: dep.type
+            }));
+            return { ...issue, dependencies: deps };
+          } catch {
+            return issue;
+          }
+        }));
+        res.json({ issues: issuesWithDeps });
       }));
       app.get("/api/executions/issue/:issueId", wrap(async (req, res) => {
         res.json([]);

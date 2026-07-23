@@ -146,8 +146,6 @@ export function AgentsPanel({ issue, onOpenExecution }: Props) {
   useEffect(() => {
     loadExecutions();
     loadTriggers();
-    const interval = setInterval(loadExecutions, 2000);
-    return () => clearInterval(interval);
   }, [loadExecutions, loadTriggers]);
 
   async function toggleTrigger(t: AgentTrigger) {

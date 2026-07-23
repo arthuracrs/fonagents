@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { api } from "./api";
 import type { Stats, Status, IssueType, Gate } from "./types";
 import { IssueModel } from "./models/IssueModel";
@@ -38,7 +38,6 @@ const typeFilters: { value: IssueType; label: string; color: string }[] = [
 export default function App() {
   const [view, setView] = useState<View>("all");
   const [issues, setIssues] = useState<IssueModel[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -80,14 +79,23 @@ export default function App() {
     }
   }, [view, search, statusFilter, typeFilter]);
 
-  const loadStats = useCallback(async () => {
-    try {
-      const s = await api.issues.stats();
-      setStats(s);
-    } catch {
-      /* non-critical */
-    }
-  }, []);
+  const loadIssuesRef = useRef(loadIssues);
+  loadIssuesRef.current = loadIssues;
+
+  const stats = useMemo(() => {
+    if (issues.length === 0) return null;
+    return {
+      summary: {
+        total_issues: issues.length,
+        open_issues: issues.filter((i) => i.status === "open").length,
+        in_progress_issues: issues.filter((i) => i.status === "in_progress").length,
+        blocked_issues: issues.filter((i) => i.status === "blocked").length,
+        closed_issues: issues.filter((i) => i.status === "closed").length,
+        deferred_issues: issues.filter((i) => i.status === "deferred").length,
+        ready_issues: issues.filter((i) => i.status === "open" || i.status === "in_progress").length,
+      },
+    } as Stats;
+  }, [issues]);
 
   useEffect(() => {
     api.initStatus().then(({ initialized }) => setInitialized(initialized));
@@ -101,6 +109,8 @@ export default function App() {
         setGates((prev) => [...prev.filter((g) => g.id !== event.gate.id), event.gate]);
       } else if (event.type === "gate_resolved") {
         setGates((prev) => prev.filter((g) => g.id !== event.gateId));
+      } else if (event.type === "issue_changed" || event.type === "worker_status" || event.type === "molecule_poured") {
+        loadIssuesRef.current({ silent: true });
       }
     });
     return unsub;
@@ -109,19 +119,10 @@ export default function App() {
   useEffect(() => {
     if (initialized) {
       loadIssues();
-      loadStats();
     }
-  }, [initialized, loadIssues, loadStats]);
+  }, [initialized, loadIssues]);
 
-  useEffect(() => {
-    if (!initialized) return;
-    const interval = setInterval(() => {
-      if (document.hidden) return;
-      loadIssues({ silent: true });
-      loadStats();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [initialized, loadIssues, loadStats]);
+
 
   async function handleInit() {
     setInitializing(true);
@@ -144,7 +145,6 @@ export default function App() {
 
   function handleUpdated() {
     loadIssues();
-    loadStats();
   }
 
   if (initialized === null) {
@@ -243,7 +243,7 @@ export default function App() {
               + New
             </button>
             <button
-              onClick={() => { loadIssues(); loadStats(); }}
+              onClick={() => loadIssues()}
               className="text-[var(--text-muted)] hover:text-[var(--text)] text-sm transition-colors"
               title="Refresh"
             >

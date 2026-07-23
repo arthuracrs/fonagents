@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { api } from "../api";
 import { IssueModel } from "../models/IssueModel";
-import type { Status, DependencyType } from "../types";
+import type { Status } from "../types";
 
 interface Props {
   onSelectIssue: (id: string) => void;
@@ -155,29 +155,9 @@ export function DependencyGraphView({ onSelectIssue }: Props) {
   useEffect(() => {
     (async () => {
       try {
-        const issuesData = await api.issues.list({});
-        const issues = issuesData.map(IssueModel.from);
-        
-        const issuesWithDeps = await Promise.all(
-          issues.map(async (issue) => {
-            try {
-              const deps = await api.deps.list(issue.id);
-              if (deps && Array.isArray(deps) && deps.length > 0) {
-                issue.dependencies = (deps as Record<string, unknown>[]).map((dep) => ({
-                  id: String(dep.id || dep.issue_id || ""),
-                  dep_type: (dep.dep_type || dep.type || "related") as DependencyType,
-                  title: dep.title as string | undefined,
-                  status: dep.status as Status | undefined,
-                }));
-              }
-            } catch {
-              // Ignore errors for individual issues
-            }
-            return issue;
-          })
-        );
-        
-        setIssues(issuesWithDeps);
+        const result = await api.graph() as { issues: { dependencies?: { id: string; dep_type: string }[] }[] };
+        const issues = result.issues.map(IssueModel.from);
+        setIssues(issues);
       } catch (err: unknown) {
         setError((err as Error).message);
       } finally {
