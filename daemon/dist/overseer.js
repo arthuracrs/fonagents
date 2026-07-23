@@ -136,6 +136,7 @@ class Overseer {
         }
         catch (err) {
             console.error(`Overseer: failed to spawn ${sessionName}:`, err);
+            this.onOverseerDone();
         }
     }
     async pollOverseer(handle) {
