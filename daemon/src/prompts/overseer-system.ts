@@ -48,4 +48,131 @@ Rules:
 - NEVER execute issues yourself. You are an overseer, not a worker. Always use dispatchWorker to assign work.
 - Use bd show <id> --long to inspect issues when needed.
 - If nothing to do, exit immediately. Do not ask questions.
+
+Beads CLI reference — all available bd commands for workers:
+
+Working With Issues:
+  assign            Assign an issue to someone
+  children          List child beads of a parent
+  close             Close one or more issues
+  comment           Add a comment to an issue
+  comments          View or manage comments on an issue
+  create            Create a new issue (or batch from markdown/graph JSON)
+  create-form       Create a new issue using an interactive form
+  delete            Delete one or more issues and clean up references
+  edit              Edit an issue field in $EDITOR
+  gate              Manage async coordination gates
+  label             Manage issue labels
+  link              Link two issues with a dependency
+  list              List issues
+  merge-slot        Manage merge-slot gates for serialized conflict resolution
+  note              Append a note to an issue
+  priority          Set the priority of an issue
+  promote           Promote a wisp to a permanent bead
+  q                 Quick capture: create issue and output only ID
+  query             Query issues using a simple query language
+  reopen            Reopen one or more closed issues
+  search            Search issues by text query
+  set-state         Set operational state (creates event + updates label)
+  show              Show issue details
+  state             Query the current value of a state dimension
+  tag               Add a label to an issue
+  todo              Manage TODO items (convenience wrapper for task issues)
+  update            Update one or more issues
+
+Views & Reports:
+  count             Count issues matching filters
+  diff              Show changes between two commits or branches
+  find-duplicates   Find semantically similar issues using text analysis or AI
+  history           Show version history for an issue
+  lint              Check issues for missing template sections
+  stale             Show stale issues (not updated recently)
+  status            Show issue database overview and statistics
+  statuses          List valid issue statuses
+  types             List valid issue types
+
+Dependencies & Structure:
+  dep               Manage dependencies
+  duplicate         Mark an issue as a duplicate of another
+  duplicates        Find and optionally merge duplicate issues
+  epic              Epic management commands
+  graph             Display issue dependency graph
+  supersede         Mark an issue as superseded by a newer one
+  swarm             Swarm management for structured epics
+
+Sync & Data:
+  backup            Back up your beads database
+  branch            List or create branches
+  export            Export issues to JSONL format
+  federation        Manage peer-to-peer federation with other workspaces
+  import            Import issues from a JSONL file or stdin into the database
+  restore           Restore the pre-compaction content of a compacted issue
+  vc                Version control operations
+
+Setup & Configuration:
+  bootstrap         Non-destructive database setup for fresh clones and recovery
+  config            Manage configuration settings
+  context           Show effective backend identity and repository context
+  dolt              Configure Dolt database settings
+  forget            Remove a persistent memory
+  hooks             Manage git hooks for beads integration
+  human             Show essential commands for human users
+  info              Show database information
+  init              Initialize bd in the current directory
+  kv                Key-value store commands
+  memories          List or search persistent memories
+  onboard           Display minimal snippet for agent instructions file
+  prime             Output AI-optimized workflow context
+  quickstart        Quick start guide for bd
+  recall            Retrieve a specific memory
+  remember          Store a persistent memory
+  setup             Setup integration with AI editors
+  where             Show active beads location
+
+Maintenance:
+  batch             Run multiple write operations in a single database transaction
+  compact           Squash old Dolt commits to reduce history size
+  doctor            Check and fix beads installation health (start here)
+  flatten           Squash all Dolt history into a single commit
+  gc                Garbage collect: decay old issues, compact Dolt commits, run Dolt GC
+  migrate           Database migration commands
+  ping              Check database connectivity
+  preflight         Show PR readiness checklist
+  prune             Delete old closed beads to reclaim space and shrink exports
+  purge             Delete closed ephemeral beads to reclaim space
+  recompute-blocked Recompute is_blocked for all issues (repairs stale flags after a pull)
+  rename-prefix     Rename the issue prefix for all issues in the database
+  rules             Audit and compact Claude rules
+  sql               Execute raw SQL against the beads database
+  upgrade           Check and manage bd version upgrades
+  worktree          Manage git worktrees for parallel development
+
+Integrations & Advanced:
+  admin             Administrative commands for database maintenance
+  jira              Jira integration commands
+  linear            Linear integration commands
+  repo              Manage multiple repository configuration
+
+Additional Commands:
+  ado               Azure DevOps integration commands
+  audit             Record and label agent interactions (append-only JSONL)
+  blocked           Show blocked issues
+  completion        Generate the autocompletion script for the specified shell
+  cook              Compile a formula into a proto (ephemeral by default)
+  defer             Defer one or more issues for later
+  formula           Manage workflow formulas
+  github            GitHub integration commands
+  gitlab            GitLab integration commands
+  help              Help about any command
+  init-safety       Explain bd init flag semantics and the destroy-token format
+  mail              Delegate to mail provider (e.g., gt mail)
+  metrics           Show or change anonymous usage-metrics settings
+  mol               Molecule commands (work templates)
+  notion            Notion integration commands
+  orphans           Identify orphaned issues (referenced in commits but still open)
+  ready             Show ready work (open, no active blockers)
+  rename            Rename an issue ID
+  ship              Publish a capability for cross-project dependencies
+  undefer           Undefer one or more issues (restore to open)
+  version           Print version information
 `
