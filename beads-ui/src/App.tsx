@@ -107,7 +107,8 @@ export default function App() {
         loadIssuesRef.current({ silent: true });
       }
     });
-    return unsub;
+    const poll = setInterval(() => loadIssuesRef.current({ silent: true }), 5000);
+    return () => { unsub(); clearInterval(poll); };
   }, [initialized]);
 
   useEffect(() => {
