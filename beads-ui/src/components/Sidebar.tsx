@@ -71,7 +71,7 @@ export function Sidebar({ view, onView }: Props) {
             title={overseer?.config.enabled ? "Click to disable" : "Click to enable"}
           >
             <span
-              className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform ${
+              className={`absolute left-0 top-0.5 h-3 w-3 rounded-full bg-white transition-transform ${
                 overseer?.config.enabled ? "translate-x-3.5" : "translate-x-0.5"
               }`}
             />
