@@ -121,8 +121,8 @@ export class BeadsAdapter implements IssueTrackerPort {
     return mapIssue(Array.isArray(parsed) ? parsed[0] : parsed)
   }
 
-  async claimIssue(id: IssueId): Promise<Issue> {
-    const raw = await this.run(['update', id, '--claim', '--json'])
+  async claimIssue(id: IssueId, actor?: string): Promise<Issue> {
+    const raw = await this.run(['update', id, '--claim', '--json'], actor)
     const parsed = JSON.parse(raw)
     return mapIssue(Array.isArray(parsed) ? parsed[0] : parsed)
   }
@@ -194,7 +194,7 @@ export class BeadsAdapter implements IssueTrackerPort {
     const args = ['mol', 'pour', formulaName, '--json']
     for (const [k, v] of Object.entries(vars)) args.push('--var', `${k}=${v}`)
     if (opts?.assignee) args.push('--assignee', opts.assignee)
-    const raw = await this.run(args)
+    const raw = await this.run(args, 'manager')
     const parsed = JSON.parse(raw)
     const molRaw = Array.isArray(parsed) ? parsed[0] : parsed
     return mapMolecule(molRaw)

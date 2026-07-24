@@ -314,7 +314,7 @@ var require_Orchestrator = __commonJS({
         const issue = await this.tracker.getIssue(input.issueId);
         if (!issue)
           throw new Error(`Cannot dispatch: issue ${input.issueId} not found`);
-        await this.tracker.claimIssue(input.issueId);
+        await this.tracker.claimIssue(input.issueId, "manager");
         const spawnInput = {
           issueId: input.issueId,
           runtimeId: input.runtimeId ?? DEFAULT_WORKER_RUNTIME,

@@ -107,7 +107,7 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
   }): Promise<{ workerId: WorkerId }> {
     const issue = await this.tracker.getIssue(input.issueId)
     if (!issue) throw new Error(`Cannot dispatch: issue ${input.issueId} not found`)
-    await this.tracker.claimIssue(input.issueId)
+    await this.tracker.claimIssue(input.issueId, 'manager')
 
     const spawnInput: SpawnWorkerInput = {
       issueId: input.issueId,

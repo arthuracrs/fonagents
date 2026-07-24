@@ -23,7 +23,7 @@ export interface IssueTrackerPort {
   updateIssue(id: IssueId, patch: IssueUpdatePatch): Promise<Issue>
   closeIssue(id: IssueId, reason?: string): Promise<Issue>
   reopenIssue(id: IssueId): Promise<Issue>
-  claimIssue(id: IssueId): Promise<Issue>
+  claimIssue(id: IssueId, actor?: string): Promise<Issue>
 
   // ── Comments ────────────────────────────────────────────────────────────────
   addComment(id: IssueId, body: string, actor?: string): Promise<Comment>

@@ -15,7 +15,7 @@ export declare class BeadsAdapter implements IssueTrackerPort {
     updateIssue(id: IssueId, patch: IssueUpdatePatch): Promise<Issue>;
     closeIssue(id: IssueId, reason?: string): Promise<Issue>;
     reopenIssue(id: IssueId): Promise<Issue>;
-    claimIssue(id: IssueId): Promise<Issue>;
+    claimIssue(id: IssueId, actor?: string): Promise<Issue>;
     addComment(id: IssueId, body: string, actor?: string): Promise<Comment>;
     listComments(id: IssueId): Promise<Comment[]>;
     listDependencies(id: IssueId): Promise<Dependency[]>;

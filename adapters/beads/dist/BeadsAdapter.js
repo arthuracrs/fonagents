@@ -98,8 +98,8 @@ class BeadsAdapter {
         const parsed = JSON.parse(raw);
         return (0, mapper_js_1.mapIssue)(Array.isArray(parsed) ? parsed[0] : parsed);
     }
-    async claimIssue(id) {
-        const raw = await this.run(['update', id, '--claim', '--json']);
+    async claimIssue(id, actor) {
+        const raw = await this.run(['update', id, '--claim', '--json'], actor);
         const parsed = JSON.parse(raw);
         return (0, mapper_js_1.mapIssue)(Array.isArray(parsed) ? parsed[0] : parsed);
     }
@@ -163,7 +163,7 @@ class BeadsAdapter {
             args.push('--var', `${k}=${v}`);
         if (opts?.assignee)
             args.push('--assignee', opts.assignee);
-        const raw = await this.run(args);
+        const raw = await this.run(args, 'manager');
         const parsed = JSON.parse(raw);
         const molRaw = Array.isArray(parsed) ? parsed[0] : parsed;
         return (0, mapper_js_1.mapMolecule)(molRaw);
