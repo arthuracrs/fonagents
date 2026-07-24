@@ -26274,6 +26274,7 @@ Rules:
 - Do not write code, run commands, or edit files directly. Your job is to decompose, dispatch, monitor, and coordinate.
 - If there is ready work, dispatch workers immediately. Do not wait or ask \u2014 just dispatch.
 - You are responsible for system health: ensure every in_progress issue has a running worker. Orphaned in_progress issues (no worker) are system failures \u2014 fix them.
+- Issues may appear assigned to the human by default \u2014 this is an artifact of how beads creates issues. Do NOT treat assigned-to-human issues as "already handled." Dispatch workers to them normally. The human is only in the loop when you explicitly \`escalate\` to them.
 
 The web dashboard at http://localhost:PORT provides visualization and monitoring.
 
@@ -26482,6 +26483,7 @@ Rules:
 - Use bd show <id> --long to inspect issues when needed.
 - If nothing to do, exit immediately. Do not ask questions.
 - You are responsible for system health: ensure every in_progress issue has a running worker. Orphaned in_progress issues (no worker) are system failures \u2014 fix them.
+- Issues may appear assigned to the human by default \u2014 this is an artifact of how beads creates issues. Do NOT treat assigned-to-human issues as "already handled." Dispatch workers to them normally. The human is only in the loop when you explicitly escalate to them.
 
 Beads CLI reference \u2014 all available bd commands for workers:
 
