@@ -55,7 +55,9 @@ export function KanbanBoard({ issues, gates, onSelect }: Props) {
   return (
     <div className="flex h-full gap-3 overflow-x-auto p-4">
       {COLUMNS.map((col) => {
-        const colIssues = grouped[col.status] ?? [];
+        const colIssues = (grouped[col.status] ?? []).sort(
+          (a, b) => b.createdAt.localeCompare(a.createdAt)
+        );
         return (
           <div key={col.status} className="flex w-72 shrink-0 flex-col rounded-xl border border-[var(--border)] bg-[var(--surface2)]">
             {/* Column header */}
