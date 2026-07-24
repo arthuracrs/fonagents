@@ -14,7 +14,6 @@ const NON_ISSUE_VIEWS = new Set(["formulas", "graph"]);
 
 const viewLabel: Record<View, string> = {
   all: "Board",
-  ready: "Ready to Work",
   formulas: "Formulas",
   graph: "Dependency Graph",
 };
@@ -57,16 +56,11 @@ export default function App() {
       setError("");
     }
     try {
-      let data: IssueModel[];
-      if (view === "ready") {
-        data = (await api.issues.ready()).map(IssueModel.from);
-      } else {
-        const params: Record<string, string> = {};
-        if (statusFilter) params.status = statusFilter;
-        if (typeFilter) params.type = typeFilter;
-        if (search) params.search = search;
-        data = (await api.issues.list(Object.keys(params).length > 0 ? params : undefined)).map(IssueModel.from);
-      }
+      const params: Record<string, string> = {};
+      if (statusFilter) params.status = statusFilter;
+      if (typeFilter) params.type = typeFilter;
+      if (search) params.search = search;
+      const data = (await api.issues.list(Object.keys(params).length > 0 ? params : undefined)).map(IssueModel.from);
       setIssues(data);
       if (silent) setError("");
     } catch (err: unknown) {
@@ -187,7 +181,7 @@ export default function App() {
             {viewLabel[view]}
           </h1>
 
-          {view !== "ready" && !NON_ISSUE_VIEWS.has(view) && (
+          {!NON_ISSUE_VIEWS.has(view) && (
             <input
               className="flex-1 max-w-xs rounded-md border border-[var(--border)] bg-[var(--surface2)] px-3 py-1.5 text-sm text-[var(--text)] placeholder-[var(--text-muted)] outline-none focus:border-[var(--accent)]"
               placeholder="Search…"
@@ -196,7 +190,7 @@ export default function App() {
             />
           )}
 
-          {!NON_ISSUE_VIEWS.has(view) && view !== "ready" && (
+          {!NON_ISSUE_VIEWS.has(view) && (
             <>
               <div className="flex items-center gap-1">
                 {statusFilters.map((f) => (
@@ -272,9 +266,6 @@ export default function App() {
           <div className="flex flex-1 flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
             <span className="text-2xl">○</span>
             <span className="text-sm">No issues found</span>
-            {view === "ready" && (
-              <span className="text-xs">All tasks have open blockers or are closed.</span>
-            )}
           </div>
         )}
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { OverseerStatus } from "../types";
 import { api } from "../api";
 
-export type View = "all" | "ready" | "formulas" | "graph";
+export type View = "all" | "formulas" | "graph";
 
 interface Props {
   view: View;
@@ -11,7 +11,6 @@ interface Props {
 
 const navItems: { label: string; view: View; icon: string }[] = [
   { label: "Board",         view: "all",         icon: "⊞" },
-  { label: "Ready",        view: "ready",        icon: "→" },
   { label: "Graph",        view: "graph",        icon: "◇" },
   { label: "Formulas",     view: "formulas",     icon: "⬡" },
 ];

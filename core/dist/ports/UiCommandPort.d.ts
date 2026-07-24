@@ -1,4 +1,4 @@
-import type { Comment, Dependency, Gate, GateId, Issue, IssueId, Molecule, MoleculeId, ReadyWork, RuntimeInfo, WorkerHandle, WorkerId } from '../domain/types.js';
+import type { Comment, Dependency, Gate, GateId, Issue, IssueId, Molecule, MoleculeId, RuntimeInfo, WorkerHandle, WorkerId } from '../domain/types.js';
 import type { IssueCreateInput, IssueFilter, IssueUpdatePatch } from './IssueTrackerPort.js';
 export interface UiCommandPort {
     resolveGate(gateId: GateId, note?: string): Promise<void>;
@@ -7,7 +7,6 @@ export interface UiCommandPort {
     getIssue(id: IssueId): Promise<Issue | undefined>;
     listMolecules(): Promise<Molecule[]>;
     showMolecule(id: MoleculeId): Promise<unknown>;
-    listReadyWork(): Promise<ReadyWork[]>;
     listGates(): Promise<Gate[]>;
     getWorkerStatus(workerId: WorkerId): Promise<WorkerHandle | undefined>;
     listWorkers(): Promise<WorkerHandle[]>;

@@ -1,4 +1,4 @@
-import type { Comment, Dependency, FormulaSummary, Gate, GateId, Issue, IssueId, Molecule, MoleculeId, ReadyWork, RuntimeInfo, WorkerHandle, WorkerId } from '../domain/types.js';
+import type { Comment, Dependency, FormulaSummary, Gate, GateId, Issue, IssueId, Molecule, MoleculeId, RuntimeInfo, WorkerHandle, WorkerId } from '../domain/types.js';
 import type { AgentRuntimePort } from '../ports/AgentRuntimePort.js';
 import type { IssueCreateInput, IssueFilter, IssueTrackerPort, IssueUpdatePatch } from '../ports/IssueTrackerPort.js';
 import type { ManagerToolsPort } from '../ports/ManagerToolsPort.js';
@@ -26,7 +26,6 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
     getIssue(id: IssueId): Promise<Issue | undefined>;
     listMolecules(): Promise<Molecule[]>;
     showMolecule(id: MoleculeId): Promise<unknown>;
-    listReadyWork(): Promise<ReadyWork[]>;
     listGates(): Promise<Gate[]>;
     getWorkerStatus(workerId: WorkerId): Promise<WorkerHandle | undefined>;
     listWorkers(): Promise<WorkerHandle[]>;

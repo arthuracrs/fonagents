@@ -256,9 +256,6 @@ var require_Orchestrator = __commonJS({
       showMolecule(id) {
         return this.tracker.showMolecule(id);
       }
-      listReadyWork() {
-        return this.tracker.readyWork();
-      }
       listGates() {
         return this.tracker.listGates({ open: true });
       }

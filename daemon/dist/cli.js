@@ -256,9 +256,6 @@ var require_Orchestrator = __commonJS({
       showMolecule(id) {
         return this.tracker.showMolecule(id);
       }
-      listReadyWork() {
-        return this.tracker.readyWork();
-      }
       listGates() {
         return this.tracker.listGates({ open: true });
       }
@@ -25466,9 +25463,6 @@ var require_HttpSseAdapter = __commonJS({
       }));
       app.get("/api/formulas", wrap(async (_req, res) => {
         res.json(await command.listFormulas());
-      }));
-      app.get("/api/ready", wrap(async (_req, res) => {
-        res.json(await command.listReadyWork());
       }));
       app.get("/api/gates", wrap(async (_req, res) => {
         res.json(await command.listGates());

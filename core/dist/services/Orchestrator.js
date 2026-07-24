@@ -32,7 +32,6 @@ class Orchestrator {
     getIssue(id) { return this.tracker.getIssue(id); }
     listMolecules() { return this.tracker.listMolecules(); }
     showMolecule(id) { return this.tracker.showMolecule(id); }
-    listReadyWork() { return this.tracker.readyWork(); }
     listGates() { return this.tracker.listGates({ open: true }); }
     getWorkerStatus(workerId) {
         return Promise.resolve(this.runtime.getWorker(workerId));

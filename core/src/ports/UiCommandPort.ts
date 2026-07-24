@@ -7,7 +7,6 @@ import type {
   IssueId,
   Molecule,
   MoleculeId,
-  ReadyWork,
   RuntimeInfo,
   WorkerHandle,
   WorkerId,
@@ -26,7 +25,6 @@ export interface UiCommandPort {
   getIssue(id: IssueId): Promise<Issue | undefined>
   listMolecules(): Promise<Molecule[]>
   showMolecule(id: MoleculeId): Promise<unknown>
-  listReadyWork(): Promise<ReadyWork[]>
   listGates(): Promise<Gate[]>
   getWorkerStatus(workerId: WorkerId): Promise<WorkerHandle | undefined>
   listWorkers(): Promise<WorkerHandle[]>

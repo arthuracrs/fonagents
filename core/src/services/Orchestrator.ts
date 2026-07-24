@@ -9,7 +9,6 @@ import type {
   IssueId,
   Molecule,
   MoleculeId,
-  ReadyWork,
   RuntimeInfo,
   WorkerHandle,
   WorkerId,
@@ -63,7 +62,6 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
   getIssue(id: IssueId): Promise<Issue | undefined> { return this.tracker.getIssue(id) }
   listMolecules(): Promise<Molecule[]> { return this.tracker.listMolecules() }
   showMolecule(id: MoleculeId): Promise<unknown> { return this.tracker.showMolecule(id) }
-  listReadyWork(): Promise<ReadyWork[]> { return this.tracker.readyWork() }
   listGates(): Promise<Gate[]> { return this.tracker.listGates({ open: true }) }
   getWorkerStatus(workerId: WorkerId): Promise<WorkerHandle | undefined> {
     return Promise.resolve(this.runtime.getWorker(workerId))

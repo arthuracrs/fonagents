@@ -19,10 +19,6 @@ class IssuesApi {
     return this.http.request<Issue[]>(`/issues${qs}`);
   }
 
-  ready(): Promise<Issue[]> {
-    return this.http.request<Issue[]>("/ready");
-  }
-
   stats(): Promise<Stats> {
     return this.http.request<Stats>("/issues/stats");
   }

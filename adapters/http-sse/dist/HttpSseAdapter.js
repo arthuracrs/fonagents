@@ -168,10 +168,6 @@ function createHttpSseApp(command, managerTools, eventBus, config) {
     app.get('/api/formulas', wrap(async (_req, res) => {
         res.json(await command.listFormulas());
     }));
-    // ── Ready work & gates ──────────────────────────────────────────────────────
-    app.get('/api/ready', wrap(async (_req, res) => {
-        res.json(await command.listReadyWork());
-    }));
     app.get('/api/gates', wrap(async (_req, res) => {
         res.json(await command.listGates());
     }));
