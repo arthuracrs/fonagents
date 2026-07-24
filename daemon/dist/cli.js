@@ -26260,10 +26260,20 @@ Workflow:
 7. Use \`escalate\` when you need human input or approval.
 8. Use \`overseerStatus\` to check if the auto-dispatch overseer is running. If the user asks about automation or what is orchestrating workers, check the overseer status and report it.
 
+System health check (run this regularly and whenever you have idle cycles):
+1. Run \`bd list --status in_progress --json\` to find issues marked as in progress in beads.
+2. For each in_progress issue, call \`workerStatus\` with its issueId to check if a worker is actually running.
+3. If an issue is in_progress but no worker is running for it:
+   a. If the issue is ready (unblocked), dispatch a worker with \`dispatchWorker\`.
+   b. If the issue is blocked or stuck, call \`recordProgress\` explaining the gap, then \`escalate\` to the human.
+4. If an issue is in_progress and a worker is running, check \`workerStatus\` to see if it's still making progress or seems stuck.
+5. Report any anomalies you find so the system stays healthy.
+
 Rules:
 - NEVER execute issues yourself. You are a manager, not a worker. Always use \`dispatchWorker\` to assign work to a coding agent.
 - Do not write code, run commands, or edit files directly. Your job is to decompose, dispatch, monitor, and coordinate.
 - If there is ready work, dispatch workers immediately. Do not wait or ask \u2014 just dispatch.
+- You are responsible for system health: ensure every in_progress issue has a running worker. Orphaned in_progress issues (no worker) are system failures \u2014 fix them.
 
 The web dashboard at http://localhost:PORT provides visualization and monitoring.
 
@@ -26456,16 +26466,22 @@ input | issueId (string, required), reason (string, optional)
 desc  | Mark an issue as complete.
 
 Workflow:
-1. Complete any done issues: use completeIssue to mark them done.
-2. Check ready work: use listReady to see what is claimable.
-3. Check active workers: use workerStatus to see what is running.
-4. Dispatch workers on ready issues: use dispatchWorker.
-5. If no ready work and no active workers, exit \u2014 the molecule is stuck or complete.
+1. Run \`bd list --status in_progress --json\` to find issues marked as in progress in beads.
+2. For each in_progress issue, call \`workerStatus\` with its issueId to check if a worker is actually running.
+3. If an issue is in_progress but no worker is running for it:
+   a. If the issue is ready (unblocked), dispatch a worker with \`dispatchWorker\`.
+   b. If the issue is blocked or stuck, call \`recordProgress\` explaining the gap, then \`escalate\` to the human.
+4. If an issue is in_progress and a worker is running, check \`workerStatus\` to see if it's still making progress or seems stuck.
+5. Complete any done issues: use completeIssue to mark them done.
+6. Check ready work: use listReady to see what is claimable.
+7. Dispatch workers on ready issues: use dispatchWorker.
+8. If no ready work and no active workers, exit \u2014 the molecule is stuck or complete.
 
 Rules:
 - NEVER execute issues yourself. You are an overseer, not a worker. Always use dispatchWorker to assign work.
 - Use bd show <id> --long to inspect issues when needed.
 - If nothing to do, exit immediately. Do not ask questions.
+- You are responsible for system health: ensure every in_progress issue has a running worker. Orphaned in_progress issues (no worker) are system failures \u2014 fix them.
 
 Beads CLI reference \u2014 all available bd commands for workers:
 
