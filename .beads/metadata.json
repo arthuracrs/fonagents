@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "fonagents",
+  "project_id": "8bf3e985-4ad4-4d85-93bc-718b7bf05439"
+}
