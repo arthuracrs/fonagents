@@ -13,7 +13,7 @@ import type {
   ReadyWork,
 } from '../domain/types.js'
 
-// The issue tracker port. Implemented by adapters/beads (bd CLI).
+// The issue tracker port. Implemented by adapters/taskforge (TaskForge).
 // A future adapter could target Linear/Jira/GitHub Issues without touching core.
 export interface IssueTrackerPort {
   // ── Issues ──────────────────────────────────────────────────────────────────

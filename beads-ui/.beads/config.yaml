@@ -1,3 +1,0 @@
-no-git-ops: true
-sync:
-    remote: "git+https://github.com/arthuracrs/beads-ui.git"

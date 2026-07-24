@@ -1,7 +1,7 @@
 {
   "name": "fonagents",
   "version": "0.0.0",
-  "description": "Manager agent + swarm orchestration on top of the Beads issue tracker.",
+  "description": "Manager agent + swarm orchestration on top of the TaskForge issue tracker.",
   "workspaces": [
     "core",
     "adapters/*",

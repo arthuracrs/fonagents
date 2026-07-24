@@ -99,7 +99,7 @@ export class AnagentAdapter implements AgentRuntimePort {
     const proc = spawn(this.bin, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
       cwd: input.cwd ?? this.cwd,
-      env: { ...process.env, BEADS_ACTOR: `worker-${id}` },
+      env: { ...process.env, FONAGENTS_WORKER_ID: id },
     })
     handle.process = proc
 
@@ -216,7 +216,7 @@ export class AnagentAdapter implements AgentRuntimePort {
       handle.tmuxSession = sessionName
 
       await execFileAsync('tmux', [
-        'set-environment', '-t', sessionName, 'BEADS_ACTOR', `worker-${id}`,
+        'set-environment', '-t', sessionName, 'FONAGENTS_WORKER_ID', id,
       ]).catch(() => {})
 
       this.pollOpencodeWorker(id, handle, sessionName).catch((err) => {

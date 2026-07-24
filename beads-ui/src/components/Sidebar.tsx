@@ -34,7 +34,7 @@ export function Sidebar({ view, onView }: Props) {
       <div className="mb-4 px-3">
         <div className="flex items-center gap-2">
           <span className="text-base">◎</span>
-          <span className="text-sm font-semibold text-[var(--text)]">Beads</span>
+          <span className="text-sm font-semibold text-[var(--text)]">TaskForge</span>
         </div>
       </div>
 

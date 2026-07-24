@@ -154,19 +154,19 @@ export default function App() {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4">
         <div className="text-4xl">◎</div>
-        <h1 className="text-xl font-semibold text-[var(--text)]">Beads not initialized</h1>
+        <h1 className="text-xl font-semibold text-[var(--text)]">TaskForge not initialized</h1>
         <p className="max-w-sm text-center text-sm text-[var(--text-muted)]">
-          No Beads database found. Initialize one in the current directory to get started.
+          No TaskForge database found. Initialize one in the current directory to get started.
         </p>
         <button
           onClick={handleInit}
           disabled={initializing}
           className="rounded-md bg-[var(--accent)] px-5 py-2.5 text-sm font-medium text-[var(--bg)] disabled:opacity-50 hover:opacity-90"
         >
-          {initializing ? "Initializing…" : "Initialize Beads"}
+          {initializing ? "Initializing…" : "Initialize TaskForge"}
         </button>
         <p className="text-xs text-[var(--text-muted)]">
-          Runs <code className="font-mono bg-[var(--surface2)] px-1 py-0.5 rounded">bd init</code> in the current directory.
+          Creates a <code className="font-mono bg-[var(--surface2)] px-1 py-0.5 rounded">.taskforge/</code> database in the current directory.
         </p>
       </div>
     );

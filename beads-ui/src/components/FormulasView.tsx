@@ -55,14 +55,8 @@ export function FormulasView() {
         <span className="text-3xl">⬡</span>
         <span className="text-sm font-medium text-[var(--text)]">No formulas found</span>
         <p className="text-xs max-w-sm leading-relaxed">
-          Formulas are YAML workflow templates stored in{" "}
-          <code className="bg-[var(--surface2)] px-1 py-0.5 rounded font-mono">.beads/formulas/</code>
-          {" "}or{" "}
-          <code className="bg-[var(--surface2)] px-1 py-0.5 rounded font-mono">~/.beads/formulas/</code>.
-          Create a <code className="bg-[var(--surface2)] px-1 py-0.5 rounded font-mono">.yaml</code> file
-          there, then run{" "}
-          <code className="bg-[var(--surface2)] px-1 py-0.5 rounded font-mono">bd mol pour &lt;name&gt;</code>
-          {" "}to start a workflow.
+          Formulas are task templates stored in the TaskForge database.
+          Use the API to create and pour templates with variable substitution.
         </p>
       </div>
     );

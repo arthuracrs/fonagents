@@ -52,18 +52,15 @@ function createHttpSseApp(command, managerTools, eventBus, config) {
     });
     // ── Init status (frontend checks this on startup) ───────────────────────────
     app.get('/api/init-status', wrap(async (_req, res) => {
-        const bdPath = process.env.BD_PATH ?? 'bd';
-        const initialized = fs_1.default.existsSync(path_1.default.join(config.projectDir, '.beads'));
+        const dbPath = path_1.default.join(config.projectDir, '.taskforge', 'data.db');
+        const initialized = fs_1.default.existsSync(dbPath);
         res.json({ initialized });
     }));
-    app.post('/api/init', wrap(async (req, res) => {
-        const dir = req.body?.dir ?? config.projectDir;
-        const bdPath = process.env.BD_PATH ?? 'bd';
-        const { execFile } = require('child_process');
-        const { promisify } = require('util');
-        const execFileAsync = promisify(execFile);
-        const { stdout } = await execFileAsync(bdPath, ['init'], { cwd: dir });
-        res.json({ ok: true, output: stdout });
+    app.post('/api/init', wrap(async (_req, res) => {
+        const dir = config.projectDir;
+        const dbDir = path_1.default.join(dir, '.taskforge');
+        fs_1.default.mkdirSync(dbDir, { recursive: true });
+        res.json({ ok: true, output: `TaskForge database initialized at ${dbDir}/data.db` });
     }));
     // ── Gates ───────────────────────────────────────────────────────────────────
     app.post('/api/gates/:id/resolve', wrap(async (req, res) => {

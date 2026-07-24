@@ -75,11 +75,11 @@ var require_ManagerToolsPort = __commonJS({
     exports2.MANAGER_TOOL_SCHEMAS = [
       {
         name: "decompose",
-        description: "Decompose a request into a swarm molecule of child issues using a beads formula.",
+        description: "Decompose a request into a swarm molecule of child issues using a TaskForge template.",
         inputSchema: {
           type: "object",
           properties: {
-            formulaName: { type: "string", description: "Name of the beads formula to pour." },
+            formulaName: { type: "string", description: "Name of the TaskForge template to pour." },
             vars: { type: "object", description: "Variable substitutions for the formula." }
           },
           required: ["formulaName"]
@@ -165,18 +165,17 @@ var require_worker_user_default = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DEFAULT_PROMPT = void 0;
-    exports2.DEFAULT_PROMPT = `Work on beads issue {id}. Fetch its data with bd show before starting.
+    exports2.DEFAULT_PROMPT = `Work on TaskForge issue {id}.
 
 Steps:
-1. Read the issue: bd show {id} --long
-2. Start work: bd update {id} --actor agent --status in_progress
-3. When done: bd comment {id} --actor agent "<summary of what was done and proof>"
-4. Close the issue: bd close {id} --reason "<brief reason>"
+1. Read the issue: use fonagents_getIssue with id {id}
+2. Claim the issue: use fonagents_updateIssue with status in_progress
+3. When done: use fonagents_recordProgress with a summary of what was done
+4. Close the issue: use fonagents_completeIssue with a brief reason
 
 If you need human input:
-1. bd gate create {id} --type human --reason "<specific question>"
-2. bd comment {id} --actor agent "<context about what you need>"
-3. Stop working. The issue is now blocked on human response.
+1. Use fonagents_escalate with your specific question
+2. Stop working. The issue is now blocked on human response.
 
 Write comments in plain text only \u2014 no Markdown syntax. Use line breaks and indentation for readability.`;
   }
@@ -189,7 +188,7 @@ var require_worker_system = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.buildWorkerSystemPrompt = buildWorkerSystemPrompt;
     function buildWorkerSystemPrompt(issueId) {
-      return `You are a worker agent executing beads issue ${issueId}. Use \`bd show ${issueId} --long\` to view the full issue data including description, status, type, priority, labels, dependencies, and comments.`;
+      return `You are a worker agent executing TaskForge issue ${issueId}. Use the fonagents_* MCP tools to view issue data, record progress, and complete the issue.`;
     }
   }
 });

@@ -65,11 +65,11 @@ export interface ToolSchema {
 export const MANAGER_TOOL_SCHEMAS: ToolSchema[] = [
   {
     name: 'decompose',
-    description: 'Decompose a request into a swarm molecule of child issues using a beads formula.',
+    description: 'Decompose a request into a swarm molecule of child issues using a TaskForge template.',
     inputSchema: {
       type: 'object',
       properties: {
-        formulaName: { type: 'string', description: 'Name of the beads formula to pour.' },
+        formulaName: { type: 'string', description: 'Name of the TaskForge template to pour.' },
         vars: { type: 'object', description: 'Variable substitutions for the formula.' },
       },
       required: ['formulaName'],
