@@ -218,7 +218,7 @@ var require_Orchestrator = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Orchestrator = void 0;
     var index_js_1 = require_prompts();
-    var DEFAULT_MANAGER_RUNTIME = "opencode";
+    var DEFAULT_WORKER_RUNTIME = "opencode";
     var Orchestrator2 = class {
       tracker;
       runtime;
@@ -317,7 +317,7 @@ var require_Orchestrator = __commonJS({
         await this.tracker.claimIssue(input.issueId);
         const spawnInput = {
           issueId: input.issueId,
-          runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
+          runtimeId: input.runtimeId ?? DEFAULT_WORKER_RUNTIME,
           prompt: input.prompt ?? index_js_1.DEFAULT_PROMPT.replaceAll("{id}", input.issueId),
           systemPrompt: (0, index_js_1.buildWorkerSystemPrompt)(input.issueId),
           mode: "tmux",
@@ -895,9 +895,12 @@ var require_AnagentAdapter = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.AnagentAdapter = void 0;
     var child_process_1 = require("child_process");
+    var util_1 = require("util");
     var fs_1 = __importDefault(require("fs"));
     var path_1 = __importDefault(require("path"));
     var protocol_js_1 = require_protocol();
+    var execFileAsync2 = (0, util_1.promisify)(child_process_1.execFile);
+    var sleep2 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     var AnagentAdapter2 = class {
       workers = /* @__PURE__ */ new Map();
       listeners = /* @__PURE__ */ new Map();
@@ -956,6 +959,9 @@ var require_AnagentAdapter = __commonJS({
           startedAt: (/* @__PURE__ */ new Date()).toISOString()
         };
         this.workers.set(id, handle);
+        if (input.runtimeId === "opencode") {
+          return this.spawnOpencodeWorker(input, id, handle);
+        }
         const args = [
           ...this.binArgs,
           "run",
@@ -1060,6 +1066,91 @@ var require_AnagentAdapter = __commonJS({
           if (chunk)
             this.notify(workerId, { type: "text", delta: chunk });
         });
+      }
+      async spawnOpencodeWorker(input, id, handle) {
+        const combined = `${input.systemPrompt}
+
+${input.prompt}`;
+        const sessionName = `worker-${id}`;
+        try {
+          await execFileAsync2("tmux", [
+            "new-session",
+            "-d",
+            "-s",
+            sessionName,
+            "-x",
+            "220",
+            "-y",
+            "50",
+            "-c",
+            input.cwd ?? this.cwd,
+            "opencode",
+            "--agent",
+            "fonagents-worker",
+            "--prompt",
+            combined
+          ]);
+          handle.tmuxSession = sessionName;
+          await execFileAsync2("tmux", [
+            "set-environment",
+            "-t",
+            sessionName,
+            "BEADS_ACTOR",
+            `worker-${id}`
+          ]).catch(() => {
+          });
+          this.pollOpencodeWorker(id, handle, sessionName).catch((err) => {
+            handle.status = "failed";
+            handle.finishedAt = (/* @__PURE__ */ new Date()).toISOString();
+            handle.exitCode = -1;
+            delete handle.tmuxSession;
+            this.notify(id, { type: "failed", error: `Worker polling error: ${err.message}`, exitCode: -1, durationMs: 0 });
+          });
+        } catch (err) {
+          handle.status = "failed";
+          handle.finishedAt = (/* @__PURE__ */ new Date()).toISOString();
+          handle.exitCode = -1;
+          this.notify(id, { type: "failed", error: `Failed to spawn worker: ${err.message}`, exitCode: -1, durationMs: 0 });
+        }
+        return handle;
+      }
+      async pollOpencodeWorker(id, handle, sessionName) {
+        const deadline = Date.now() + 3600 * 1e3;
+        while (Date.now() < deadline) {
+          await sleep2(5e3);
+          try {
+            const { stdout } = await execFileAsync2("tmux", [
+              "display-message",
+              "-p",
+              "-t",
+              sessionName,
+              "#{pane_dead}:#{pane_dead_status}"
+            ]);
+            const [dead] = stdout.trim().split(":");
+            if (dead === "1") {
+              handle.status = "completed";
+              handle.finishedAt = (/* @__PURE__ */ new Date()).toISOString();
+              handle.exitCode = 0;
+              delete handle.tmuxSession;
+              this.notify(id, { type: "done", exitCode: 0, durationMs: 0 });
+              return;
+            }
+          } catch {
+            handle.status = "completed";
+            handle.finishedAt = (/* @__PURE__ */ new Date()).toISOString();
+            handle.exitCode = 0;
+            delete handle.tmuxSession;
+            this.notify(id, { type: "done", exitCode: 0, durationMs: 0 });
+            return;
+          }
+        }
+        handle.status = "failed";
+        handle.finishedAt = (/* @__PURE__ */ new Date()).toISOString();
+        handle.exitCode = -1;
+        await execFileAsync2("tmux", ["kill-session", "-t", sessionName]).catch(() => {
+        });
+        delete handle.tmuxSession;
+        this.notify(id, { type: "failed", error: "Worker timed out after 1 hour", exitCode: -1, durationMs: 3600 * 1e3 });
       }
       notify(workerId, event) {
         const subs = this.listeners.get(workerId);
@@ -26007,6 +26098,20 @@ async function startDaemon(opts = {}) {
     } else {
       import_fs2.default.copyFileSync(srcConfig, destConfig);
     }
+    const agentsDir = import_path2.default.join(projectOpencodeDir, "agents");
+    import_fs2.default.mkdirSync(agentsDir, { recursive: true });
+    const workerContent = `---
+description: fonagents Worker \u2014 executes beads issues autonomously
+mode: primary
+model: opencode-go/deepseek-v4-flash
+permission:
+  task: allow
+  webfetch: allow
+  websearch: allow
+  skill: allow
+---
+You are a fonagents Worker. Execute the beads issue assigned to you using the \`bd\` CLI tool.`;
+    import_fs2.default.writeFileSync(import_path2.default.join(agentsDir, "fonagents-worker.md"), workerContent, "utf8");
   }
   const tracker = new import_beads_adapter.BeadsAdapter({
     bdPath: opts.bdPath ?? process.env.BD_PATH,
@@ -26285,6 +26390,22 @@ permission:
 ${prompt}`;
   import_fs3.default.writeFileSync(import_path3.default.join(agentsDir, "fonagents-overseer.md"), content, "utf8");
 }
+function writeWorkerAgentFile(projectDir) {
+  const agentsDir = import_path3.default.join(projectDir, ".opencode", "agents");
+  import_fs3.default.mkdirSync(agentsDir, { recursive: true });
+  const content = `---
+description: fonagents Worker \u2014 executes beads issues autonomously
+mode: primary
+model: opencode-go/deepseek-v4-flash
+permission:
+  task: allow
+  webfetch: allow
+  websearch: allow
+  skill: allow
+---
+You are a fonagents Worker. Execute the beads issue assigned to you using the \`bd\` CLI tool.`;
+  import_fs3.default.writeFileSync(import_path3.default.join(agentsDir, "fonagents-worker.md"), content, "utf8");
+}
 async function readDaemonState() {
   const statePath = daemonStatePath(process.cwd());
   if (import_fs3.default.existsSync(statePath)) {
@@ -26440,6 +26561,7 @@ Manager mode \u2014 starting ${runtimeId} agent...`);
   const managerPrompt = MANAGER_PROMPT.replace(/PORT/g, String(handle.port));
   writeAgentFile(projectDir, managerPrompt);
   writeOverseerAgentFile(projectDir, OVERSEER_SYSTEM_PROMPT);
+  writeWorkerAgentFile(projectDir);
   const agentProc = launchAgent(runtimeId, INITIAL_PROMPT, handle.mcpConfigPath, projectDir, managerPrompt);
   const onSigTerm = () => {
     agentProc.kill("SIGTERM");

@@ -78,6 +78,23 @@ ${prompt}`
   fs.writeFileSync(path.join(agentsDir, 'fonagents-overseer.md'), content, 'utf8')
 }
 
+function writeWorkerAgentFile(projectDir: string): void {
+  const agentsDir = path.join(projectDir, '.opencode', 'agents')
+  fs.mkdirSync(agentsDir, { recursive: true })
+  const content = `---
+description: fonagents Worker — executes beads issues autonomously
+mode: primary
+model: opencode-go/deepseek-v4-flash
+permission:
+  task: allow
+  webfetch: allow
+  websearch: allow
+  skill: allow
+---
+You are a fonagents Worker. Execute the beads issue assigned to you using the \`bd\` CLI tool.`
+  fs.writeFileSync(path.join(agentsDir, 'fonagents-worker.md'), content, 'utf8')
+}
+
 async function readDaemonState(): Promise<{ port: number; projectDir: string } | null> {
   // 1. Check local state file first
   const statePath = daemonStatePath(process.cwd())
@@ -246,6 +263,7 @@ async function runDaemon(): Promise<void> {
   const managerPrompt = MANAGER_PROMPT.replace(/PORT/g, String(handle.port))
   writeAgentFile(projectDir, managerPrompt)
   writeOverseerAgentFile(projectDir, OVERSEER_SYSTEM_PROMPT)
+  writeWorkerAgentFile(projectDir)
 
   const agentProc = launchAgent(runtimeId, INITIAL_PROMPT, handle.mcpConfigPath, projectDir, managerPrompt)
 

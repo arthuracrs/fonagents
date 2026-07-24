@@ -1,4 +1,5 @@
 import { spawn, execFile, type ChildProcess } from 'child_process'
+import { promisify } from 'util'
 import fs from 'fs'
 import path from 'path'
 import type {
@@ -12,6 +13,9 @@ import type {
   WorkerId,
 } from '@fonagents/core'
 import { translateEvent, parseNdjsonLine, type AnagentEvent } from './protocol.js'
+
+const execFileAsync = promisify(execFile)
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 export interface AnagentAdapterConfig {
   anagentPath?: string
@@ -77,6 +81,10 @@ export class AnagentAdapter implements AgentRuntimePort {
       startedAt: new Date().toISOString(),
     }
     this.workers.set(id, handle)
+
+    if (input.runtimeId === 'opencode') {
+      return this.spawnOpencodeWorker(input, id, handle)
+    }
 
     const args = [
       ...this.binArgs,
@@ -187,6 +195,88 @@ export class AnagentAdapter implements AgentRuntimePort {
       const chunk = data.toString().trim()
       if (chunk) this.notify(workerId, { type: 'text', delta: chunk })
     })
+  }
+
+  private async spawnOpencodeWorker(
+    input: SpawnWorkerInput,
+    id: WorkerId,
+    handle: WorkerHandle & { process?: ChildProcess },
+  ): Promise<WorkerHandle> {
+    const combined = `${input.systemPrompt}\n\n${input.prompt}`
+    const sessionName = `worker-${id}`
+
+    try {
+      await execFileAsync('tmux', [
+        'new-session', '-d', '-s', sessionName,
+        '-x', '220', '-y', '50',
+        '-c', input.cwd ?? this.cwd,
+        'opencode', '--agent', 'fonagents-worker', '--prompt', combined,
+      ])
+
+      handle.tmuxSession = sessionName
+
+      await execFileAsync('tmux', [
+        'set-environment', '-t', sessionName, 'BEADS_ACTOR', `worker-${id}`,
+      ]).catch(() => {})
+
+      this.pollOpencodeWorker(id, handle, sessionName).catch((err) => {
+        handle.status = 'failed'
+        handle.finishedAt = new Date().toISOString()
+        handle.exitCode = -1
+        delete handle.tmuxSession
+        this.notify(id, { type: 'failed', error: `Worker polling error: ${err.message}`, exitCode: -1, durationMs: 0 })
+      })
+    } catch (err) {
+      handle.status = 'failed'
+      handle.finishedAt = new Date().toISOString()
+      handle.exitCode = -1
+      this.notify(id, { type: 'failed', error: `Failed to spawn worker: ${(err as Error).message}`, exitCode: -1, durationMs: 0 })
+    }
+
+    return handle
+  }
+
+  private async pollOpencodeWorker(
+    id: WorkerId,
+    handle: WorkerHandle & { process?: ChildProcess },
+    sessionName: string,
+  ): Promise<void> {
+    const deadline = Date.now() + 3600 * 1000
+
+    while (Date.now() < deadline) {
+      await sleep(5000)
+
+      try {
+        const { stdout } = await execFileAsync('tmux', [
+          'display-message', '-p', '-t', sessionName,
+          '#{pane_dead}:#{pane_dead_status}',
+        ])
+        const [dead] = stdout.trim().split(':')
+
+        if (dead === '1') {
+          handle.status = 'completed'
+          handle.finishedAt = new Date().toISOString()
+          handle.exitCode = 0
+          delete handle.tmuxSession
+          this.notify(id, { type: 'done', exitCode: 0, durationMs: 0 })
+          return
+        }
+      } catch {
+        handle.status = 'completed'
+        handle.finishedAt = new Date().toISOString()
+        handle.exitCode = 0
+        delete handle.tmuxSession
+        this.notify(id, { type: 'done', exitCode: 0, durationMs: 0 })
+        return
+      }
+    }
+
+    handle.status = 'failed'
+    handle.finishedAt = new Date().toISOString()
+    handle.exitCode = -1
+    await execFileAsync('tmux', ['kill-session', '-t', sessionName]).catch(() => {})
+    delete handle.tmuxSession
+    this.notify(id, { type: 'failed', error: 'Worker timed out after 1 hour', exitCode: -1, durationMs: 3600 * 1000 })
   }
 
   private notify(workerId: WorkerId, event: AgentStreamEvent): void {

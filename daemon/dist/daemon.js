@@ -119,6 +119,21 @@ async function startDaemon(opts = {}) {
         else {
             fs_1.default.copyFileSync(srcConfig, destConfig);
         }
+        // Write worker agent file
+        const agentsDir = path_1.default.join(projectOpencodeDir, 'agents');
+        fs_1.default.mkdirSync(agentsDir, { recursive: true });
+        const workerContent = `---
+description: fonagents Worker — executes beads issues autonomously
+mode: primary
+model: opencode-go/deepseek-v4-flash
+permission:
+  task: allow
+  webfetch: allow
+  websearch: allow
+  skill: allow
+---
+You are a fonagents Worker. Execute the beads issue assigned to you using the \`bd\` CLI tool.`;
+        fs_1.default.writeFileSync(path_1.default.join(agentsDir, 'fonagents-worker.md'), workerContent, 'utf8');
     }
     const tracker = new beads_adapter_1.BeadsAdapter({
         bdPath: opts.bdPath ?? process.env.BD_PATH,

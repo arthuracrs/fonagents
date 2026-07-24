@@ -23,7 +23,7 @@ import { buildWorkerSystemPrompt, DEFAULT_PROMPT } from '../prompts/index.js'
 import type { UiCommandPort } from '../ports/UiCommandPort.js'
 import type { UiEvent, UiEventPort } from '../ports/UiEventPort.js'
 
-const DEFAULT_MANAGER_RUNTIME = 'opencode'
+const DEFAULT_WORKER_RUNTIME = 'opencode'
 
 export interface OrchestratorConfig {
   projectDir: string
@@ -111,7 +111,7 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
 
     const spawnInput: SpawnWorkerInput = {
       issueId: input.issueId,
-      runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
+      runtimeId: input.runtimeId ?? DEFAULT_WORKER_RUNTIME,
       prompt: input.prompt ?? DEFAULT_PROMPT.replaceAll('{id}', input.issueId),
       systemPrompt: buildWorkerSystemPrompt(input.issueId),
       mode: 'tmux',

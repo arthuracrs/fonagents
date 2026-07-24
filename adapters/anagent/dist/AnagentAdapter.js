@@ -5,9 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AnagentAdapter = void 0;
 const child_process_1 = require("child_process");
+const util_1 = require("util");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const protocol_js_1 = require("./protocol.js");
+const execFileAsync = (0, util_1.promisify)(child_process_1.execFile);
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 class AnagentAdapter {
     workers = new Map();
     listeners = new Map();
@@ -64,6 +67,9 @@ class AnagentAdapter {
             startedAt: new Date().toISOString(),
         };
         this.workers.set(id, handle);
+        if (input.runtimeId === 'opencode') {
+            return this.spawnOpencodeWorker(input, id, handle);
+        }
         const args = [
             ...this.binArgs,
             'run', input.prompt,
@@ -166,6 +172,71 @@ class AnagentAdapter {
             if (chunk)
                 this.notify(workerId, { type: 'text', delta: chunk });
         });
+    }
+    async spawnOpencodeWorker(input, id, handle) {
+        const combined = `${input.systemPrompt}\n\n${input.prompt}`;
+        const sessionName = `worker-${id}`;
+        try {
+            await execFileAsync('tmux', [
+                'new-session', '-d', '-s', sessionName,
+                '-x', '220', '-y', '50',
+                '-c', input.cwd ?? this.cwd,
+                'opencode', '--agent', 'fonagents-worker', '--prompt', combined,
+            ]);
+            handle.tmuxSession = sessionName;
+            await execFileAsync('tmux', [
+                'set-environment', '-t', sessionName, 'BEADS_ACTOR', `worker-${id}`,
+            ]).catch(() => { });
+            this.pollOpencodeWorker(id, handle, sessionName).catch((err) => {
+                handle.status = 'failed';
+                handle.finishedAt = new Date().toISOString();
+                handle.exitCode = -1;
+                delete handle.tmuxSession;
+                this.notify(id, { type: 'failed', error: `Worker polling error: ${err.message}`, exitCode: -1, durationMs: 0 });
+            });
+        }
+        catch (err) {
+            handle.status = 'failed';
+            handle.finishedAt = new Date().toISOString();
+            handle.exitCode = -1;
+            this.notify(id, { type: 'failed', error: `Failed to spawn worker: ${err.message}`, exitCode: -1, durationMs: 0 });
+        }
+        return handle;
+    }
+    async pollOpencodeWorker(id, handle, sessionName) {
+        const deadline = Date.now() + 3600 * 1000;
+        while (Date.now() < deadline) {
+            await sleep(5000);
+            try {
+                const { stdout } = await execFileAsync('tmux', [
+                    'display-message', '-p', '-t', sessionName,
+                    '#{pane_dead}:#{pane_dead_status}',
+                ]);
+                const [dead] = stdout.trim().split(':');
+                if (dead === '1') {
+                    handle.status = 'completed';
+                    handle.finishedAt = new Date().toISOString();
+                    handle.exitCode = 0;
+                    delete handle.tmuxSession;
+                    this.notify(id, { type: 'done', exitCode: 0, durationMs: 0 });
+                    return;
+                }
+            }
+            catch {
+                handle.status = 'completed';
+                handle.finishedAt = new Date().toISOString();
+                handle.exitCode = 0;
+                delete handle.tmuxSession;
+                this.notify(id, { type: 'done', exitCode: 0, durationMs: 0 });
+                return;
+            }
+        }
+        handle.status = 'failed';
+        handle.finishedAt = new Date().toISOString();
+        handle.exitCode = -1;
+        await execFileAsync('tmux', ['kill-session', '-t', sessionName]).catch(() => { });
+        delete handle.tmuxSession;
+        this.notify(id, { type: 'failed', error: 'Worker timed out after 1 hour', exitCode: -1, durationMs: 3600 * 1000 });
     }
     notify(workerId, event) {
         const subs = this.listeners.get(workerId);

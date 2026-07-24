@@ -20,6 +20,8 @@ export declare class AnagentAdapter implements AgentRuntimePort {
     getWorkersForIssue(issueId: IssueId): WorkerHandle[];
     listWorkers(): WorkerHandle[];
     private pipeEvents;
+    private spawnOpencodeWorker;
+    private pollOpencodeWorker;
     private notify;
 }
 //# sourceMappingURL=AnagentAdapter.d.ts.map

@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Orchestrator = void 0;
 const index_js_1 = require("../prompts/index.js");
-const DEFAULT_MANAGER_RUNTIME = 'opencode';
+const DEFAULT_WORKER_RUNTIME = 'opencode';
 class Orchestrator {
     tracker;
     runtime;
@@ -69,7 +69,7 @@ class Orchestrator {
         await this.tracker.claimIssue(input.issueId);
         const spawnInput = {
             issueId: input.issueId,
-            runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
+            runtimeId: input.runtimeId ?? DEFAULT_WORKER_RUNTIME,
             prompt: input.prompt ?? index_js_1.DEFAULT_PROMPT.replaceAll('{id}', input.issueId),
             systemPrompt: (0, index_js_1.buildWorkerSystemPrompt)(input.issueId),
             mode: 'tmux',

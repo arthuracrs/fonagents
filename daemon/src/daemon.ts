@@ -136,6 +136,22 @@ export async function startDaemon(opts: DaemonConfig = {}): Promise<DaemonHandle
     } else {
       fs.copyFileSync(srcConfig, destConfig)
     }
+
+    // Write worker agent file
+    const agentsDir = path.join(projectOpencodeDir, 'agents')
+    fs.mkdirSync(agentsDir, { recursive: true })
+    const workerContent = `---
+description: fonagents Worker — executes beads issues autonomously
+mode: primary
+model: opencode-go/deepseek-v4-flash
+permission:
+  task: allow
+  webfetch: allow
+  websearch: allow
+  skill: allow
+---
+You are a fonagents Worker. Execute the beads issue assigned to you using the \`bd\` CLI tool.`
+    fs.writeFileSync(path.join(agentsDir, 'fonagents-worker.md'), workerContent, 'utf8')
   }
 
   const tracker = new BeadsAdapter({
