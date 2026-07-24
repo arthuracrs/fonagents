@@ -226,6 +226,245 @@ describe('SQLiteStorage', () => {
         expect(highPriority).toHaveLength(1);
         expect(highPriority[0].title).toBe('High Priority');
       });
+
+      it('should combine multiple filters with AND', async () => {
+        await storage.createTask({
+          title: 'Open Bug',
+          status: 'open',
+          priority: 2,
+          type: 'bug',
+          labels: [],
+          dependencies: [],
+        });
+        await storage.createTask({
+          title: 'Open Feature',
+          status: 'open',
+          priority: 2,
+          type: 'feature',
+          labels: [],
+          dependencies: [],
+        });
+        await storage.createTask({
+          title: 'Closed Bug',
+          status: 'closed',
+          priority: 2,
+          type: 'bug',
+          labels: [],
+          dependencies: [],
+        });
+
+        const result = await storage.listTasks({ status: 'open', type: 'bug' });
+        expect(result).toHaveLength(1);
+        expect(result[0].title).toBe('Open Bug');
+      });
+
+      it('should filter by parentId', async () => {
+        const parent = await storage.createTask({
+          title: 'Parent',
+          status: 'open',
+          priority: 2,
+          type: 'task',
+          labels: [],
+          dependencies: [],
+        });
+        await storage.createTask({
+          title: 'Child 1',
+          status: 'open',
+          priority: 2,
+          type: 'task',
+          labels: [],
+          dependencies: [],
+          parentId: parent.id,
+        });
+        await storage.createTask({
+          title: 'Child 2',
+          status: 'open',
+          priority: 2,
+          type: 'task',
+          labels: [],
+          dependencies: [],
+          parentId: parent.id,
+        });
+        await storage.createTask({
+          title: 'Orphan',
+          status: 'open',
+          priority: 2,
+          type: 'task',
+          labels: [],
+          dependencies: [],
+        });
+
+        const children = await storage.listTasks({ parentId: parent.id });
+        expect(children).toHaveLength(2);
+        expect(children.map(c => c.title).sort()).toEqual(['Child 1', 'Child 2']);
+      });
+
+      it('should filter by multiple labels (AND)', async () => {
+        await storage.createTask({
+          title: 'Urgent Bug',
+          status: 'open',
+          priority: 2,
+          type: 'bug',
+          labels: ['urgent', 'bug'],
+          dependencies: [],
+        });
+        await storage.createTask({
+          title: 'Urgent Feature',
+          status: 'open',
+          priority: 2,
+          type: 'feature',
+          labels: ['urgent', 'feature'],
+          dependencies: [],
+        });
+        await storage.createTask({
+          title: 'Just Urgent',
+          status: 'open',
+          priority: 2,
+          type: 'task',
+          labels: ['urgent'],
+          dependencies: [],
+        });
+
+        const result = await storage.listTasks({ labels: ['urgent', 'bug'] });
+        expect(result).toHaveLength(1);
+        expect(result[0].title).toBe('Urgent Bug');
+      });
+
+      it('should combine status + type + labels + priority', async () => {
+        await storage.createTask({
+          title: 'Target',
+          status: 'open',
+          priority: 1,
+          type: 'bug',
+          labels: ['critical'],
+          dependencies: [],
+        });
+        await storage.createTask({
+          title: 'Wrong Status',
+          status: 'closed',
+          priority: 1,
+          type: 'bug',
+          labels: ['critical'],
+          dependencies: [],
+        });
+        await storage.createTask({
+          title: 'Wrong Priority',
+          status: 'open',
+          priority: 3,
+          type: 'bug',
+          labels: ['critical'],
+          dependencies: [],
+        });
+
+        const result = await storage.listTasks({
+          status: 'open',
+          type: 'bug',
+          labels: ['critical'],
+          priority: 1,
+        });
+        expect(result).toHaveLength(1);
+        expect(result[0].title).toBe('Target');
+      });
+
+      it('should sort by priority ascending', async () => {
+        await storage.createTask({
+          title: 'Mid',
+          status: 'open',
+          priority: 2,
+          type: 'task',
+          labels: [],
+          dependencies: [],
+        });
+        await storage.createTask({
+          title: 'High',
+          status: 'open',
+          priority: 1,
+          type: 'task',
+          labels: [],
+          dependencies: [],
+        });
+        await storage.createTask({
+          title: 'Low',
+          status: 'open',
+          priority: 4,
+          type: 'task',
+          labels: [],
+          dependencies: [],
+        });
+
+        const result = await storage.listTasks({
+          sort: [{ field: 'priority', direction: 'asc' }],
+        });
+        expect(result.map(t => t.title)).toEqual(['High', 'Mid', 'Low']);
+      });
+
+      it('should sort by priority descending', async () => {
+        await storage.createTask({
+          title: 'High',
+          status: 'open',
+          priority: 1,
+          type: 'task',
+          labels: [],
+          dependencies: [],
+        });
+        await storage.createTask({
+          title: 'Mid',
+          status: 'open',
+          priority: 2,
+          type: 'task',
+          labels: [],
+          dependencies: [],
+        });
+        await storage.createTask({
+          title: 'Low',
+          status: 'open',
+          priority: 4,
+          type: 'task',
+          labels: [],
+          dependencies: [],
+        });
+
+        const result = await storage.listTasks({
+          sort: [{ field: 'priority', direction: 'desc' }],
+        });
+        expect(result.map(t => t.title)).toEqual(['Low', 'Mid', 'High']);
+      });
+
+      it('should paginate with limit', async () => {
+        for (let i = 1; i <= 10; i++) {
+          await storage.createTask({
+            title: `Task ${i}`,
+            status: 'open',
+            priority: 2,
+            type: 'task',
+            labels: [],
+            dependencies: [],
+          });
+        }
+
+        const result = await storage.listTasks({ limit: 3 });
+        expect(result).toHaveLength(3);
+      });
+
+      it('should paginate with limit + offset', async () => {
+        for (let i = 1; i <= 10; i++) {
+          await storage.createTask({
+            title: `Task ${String(i).padStart(2, '0')}`,
+            status: 'open',
+            priority: 2,
+            type: 'task',
+            labels: [],
+            dependencies: [],
+          });
+        }
+
+        const page1 = await storage.listTasks({ sort: [{ field: 'title', direction: 'asc' }], limit: 3, offset: 0 });
+        const page2 = await storage.listTasks({ sort: [{ field: 'title', direction: 'asc' }], limit: 3, offset: 3 });
+        expect(page1).toHaveLength(3);
+        expect(page2).toHaveLength(3);
+        expect(page1.map(t => t.title)).toEqual(['Task 01', 'Task 02', 'Task 03']);
+        expect(page2.map(t => t.title)).toEqual(['Task 04', 'Task 05', 'Task 06']);
+      });
     });
 
     describe('updateTask', () => {

@@ -8,7 +8,7 @@ exports.globalRegistryPath = globalRegistryPath;
 exports.startDaemon = startDaemon;
 exports.stopDaemon = stopDaemon;
 const core_1 = require("@fonagents/core");
-const beads_adapter_1 = require("@fonagents/beads-adapter");
+const taskforge_adapter_1 = require("@fonagents/taskforge-adapter");
 const anagent_adapter_1 = require("@fonagents/anagent-adapter");
 const http_sse_adapter_1 = require("@fonagents/http-sse-adapter");
 const overseer_js_1 = require("./overseer.js");
@@ -123,7 +123,7 @@ async function startDaemon(opts = {}) {
         const agentsDir = path_1.default.join(projectOpencodeDir, 'agents');
         fs_1.default.mkdirSync(agentsDir, { recursive: true });
         const workerContent = `---
-description: fonagents Worker — executes beads issues autonomously
+description: fonagents Worker — executes tasks autonomously
 mode: primary
 model: opencode-go/deepseek-v4-flash
 permission:
@@ -132,14 +132,13 @@ permission:
   websearch: allow
   skill: allow
 ---
-You are a fonagents Worker. Execute the beads issue assigned to you using the \`bd\` CLI tool.`;
+You are a fonagents Worker. Execute the task assigned to you using the TaskForge API at http://localhost:3001.`;
         fs_1.default.writeFileSync(path_1.default.join(agentsDir, 'fonagents-worker.md'), workerContent, 'utf8');
     }
-    const tracker = new beads_adapter_1.BeadsAdapter({
-        bdPath: opts.bdPath ?? process.env.BD_PATH,
-        projectDir,
-        actor: process.env.BEADS_ACTOR,
+    const tracker = new taskforge_adapter_1.TaskForgeAdapter({
+        dbPath: path_1.default.join(projectDir, '.taskforge', 'data.db'),
     });
+    await tracker.startServer(3002);
     const runtime = new anagent_adapter_1.AnagentAdapter({
         anagentPath: opts.anagentPath ?? process.env.ANAGENT_PATH,
         cwd: projectDir,

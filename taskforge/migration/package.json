@@ -1,0 +1,15 @@
+{
+  "name": "@taskforge/migration",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/BeadsImporter.js",
+  "types": "dist/BeadsImporter.d.ts",
+  "scripts": { "build": "tsc" },
+  "dependencies": {
+    "@taskforge/core": "file:../core"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

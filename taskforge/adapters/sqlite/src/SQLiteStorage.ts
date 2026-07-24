@@ -13,6 +13,7 @@ import type {
   GateStatus,
   Template,
   TaskTemplate,
+  TaskSort,
 } from '@taskforge/core';
 import type { StoragePort, TaskFilter } from '@taskforge/core';
 
@@ -186,6 +187,18 @@ export class SQLiteStorage implements StoragePort {
         tasks TEXT NOT NULL,
         variables TEXT NOT NULL
       );
+
+      -- Indexes for query performance
+      CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+      CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee);
+      CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_id);
+      CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at);
+      CREATE INDEX IF NOT EXISTS idx_tasks_type ON tasks(type);
+      CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
+      CREATE INDEX IF NOT EXISTS idx_events_task ON events(task_id);
+      CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_gates_task ON gates(task_id);
+      CREATE INDEX IF NOT EXISTS idx_gates_status ON gates(status);
     `);
   }
 
@@ -336,29 +349,75 @@ export class SQLiteStorage implements StoragePort {
   // ---- Tasks ----
 
   async listTasks(filter?: TaskFilter): Promise<Task[]> {
-    let rows: TaskRow[];
+    const conditions: string[] = [];
+    const params: Record<string, unknown> = {};
+
     if (filter?.status) {
-      rows = this.stmts.listTasksByStatus.all(filter.status) as TaskRow[];
-    } else if (filter?.assignee) {
-      rows = this.stmts.listTasksByAssignee.all(filter.assignee) as TaskRow[];
-    } else if (filter?.type) {
-      rows = this.stmts.listTasksByType.all(filter.type) as TaskRow[];
-    } else if (filter?.parentId !== undefined) {
-      rows = this.stmts.listTasksByParent.all(filter.parentId ?? null) as TaskRow[];
-    } else {
-      rows = this.stmts.listTasks.all() as TaskRow[];
+      conditions.push('t.status = @status');
+      params.status = filter.status;
     }
-
-    let tasks = rows.map(r => this.rowToTask(r));
-
-    if (filter?.labels?.length) {
-      tasks = tasks.filter(t => filter.labels!.every(l => t.labels.includes(l)));
+    if (filter?.assignee) {
+      conditions.push('t.assignee = @assignee');
+      params.assignee = filter.assignee;
+    }
+    if (filter?.type) {
+      conditions.push('t.type = @type');
+      params.type = filter.type;
+    }
+    if (filter?.parentId !== undefined) {
+      conditions.push('t.parent_id = @parentId');
+      params.parentId = filter.parentId ?? null;
     }
     if (filter?.priority !== undefined) {
-      tasks = tasks.filter(t => t.priority === filter.priority);
+      conditions.push('t.priority = @priority');
+      params.priority = filter.priority;
     }
 
-    return tasks;
+    let whereClause = '';
+    if (conditions.length > 0) {
+      whereClause = 'WHERE ' + conditions.join(' AND ');
+    }
+
+    // Labels filter: only tasks that have ALL specified labels
+    let labelJoin = '';
+    let labelGroupBy = '';
+    if (filter?.labels?.length) {
+      for (let i = 0; i < filter.labels.length; i++) {
+        const alias = `tl${i}`;
+        labelJoin += ` INNER JOIN task_labels ${alias} ON t.id = ${alias}.task_id AND ${alias}.label = @label${i}`;
+        params[`label${i}`] = filter.labels[i];
+      }
+    }
+
+    // Sorting
+    let orderClause = ' ORDER BY t.created_at DESC';
+    if (filter?.sort && filter.sort.length > 0) {
+      const parts = filter.sort.map((s: TaskSort) => {
+        const col = s.field === 'title' ? 't.title'
+          : s.field === 'priority' ? 't.priority'
+          : s.field === 'status' ? 't.status'
+          : s.field === 'updatedAt' ? 't.updated_at'
+          : 't.created_at';
+        const dir = s.direction === 'asc' ? 'ASC' : 'DESC';
+        return `${col} ${dir}`;
+      });
+      orderClause = ' ORDER BY ' + parts.join(', ');
+    }
+
+    // Pagination
+    let paginationClause = '';
+    if (filter?.limit !== undefined) {
+      paginationClause += ` LIMIT @_limit`;
+      params._limit = filter.limit;
+    }
+    if (filter?.offset !== undefined) {
+      paginationClause += ` OFFSET @_offset`;
+      params._offset = filter.offset;
+    }
+
+    const sql = `SELECT t.* FROM tasks t${labelJoin} ${whereClause}${orderClause}${paginationClause}`;
+    const rows = this.db.prepare(sql).all(params) as TaskRow[];
+    return rows.map(r => this.rowToTask(r));
   }
 
   async getTask(id: string): Promise<Task | undefined> {

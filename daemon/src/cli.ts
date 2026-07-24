@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 import { startDaemon, stopDaemon, daemonStatePath, globalRegistryPath } from './daemon.js'
 import { MANAGER_PROMPT, INITIAL_PROMPT, OVERSEER_SYSTEM_PROMPT } from './prompts/index.js'
-import { spawn } from 'child_process'
+import { spawn, execFile } from 'child_process'
 import { exec } from 'child_process'
+import { promisify } from 'util'
 import fs from 'fs'
 import net from 'net'
 import path from 'path'
 import readline from 'readline'
 import http from 'http'
+import { TaskForge } from '../../taskforge/dist/index.js'
 
 function findFreePort(start: number): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -44,7 +46,7 @@ function writeAgentFile(projectDir: string, prompt: string): void {
   const agentsDir = path.join(projectDir, '.opencode', 'agents')
   fs.mkdirSync(agentsDir, { recursive: true })
   const content = `---
-description: fonagents Manager — coordinates AI development through beads
+description: fonagents Manager — coordinates AI development through TaskForge
 mode: primary
 model: opencode-go/mimo-v2.5-pro
 permission:
@@ -82,7 +84,7 @@ function writeWorkerAgentFile(projectDir: string): void {
   const agentsDir = path.join(projectDir, '.opencode', 'agents')
   fs.mkdirSync(agentsDir, { recursive: true })
   const content = `---
-description: fonagents Worker — executes beads issues autonomously
+description: fonagents Worker — executes tasks autonomously
 mode: primary
 model: opencode-go/deepseek-v4-flash
 permission:
@@ -91,7 +93,7 @@ permission:
   websearch: allow
   skill: allow
 ---
-You are a fonagents Worker. Execute the beads issue assigned to you using the \`bd\` CLI tool.`
+You are a fonagents Worker. Execute the task assigned to you using the TaskForge API at http://localhost:3001.`
   fs.writeFileSync(path.join(agentsDir, 'fonagents-worker.md'), content, 'utf8')
 }
 
@@ -235,6 +237,108 @@ function attachTmux(session: string): void {
   })
 }
 
+async function runMigrate(): Promise<void> {
+  const projectDir = process.env.PROJECT_DIR || process.cwd()
+  const beadsDir = path.join(projectDir, '.beads')
+  if (!fs.existsSync(beadsDir)) {
+    console.log('No .beads/ directory found. Nothing to migrate.')
+    return
+  }
+
+  console.log('Migrating beads issues to TaskForge...')
+  const execFileAsync = promisify(execFile)
+
+  let stdout: string
+  try {
+    const result = await execFileAsync('bd', ['list', '--all', '-n', '0', '--json'], {
+      cwd: projectDir,
+      maxBuffer: 10 * 1024 * 1024,
+    })
+    stdout = result.stdout
+  } catch (err: any) {
+    console.error('Failed to list beads issues. Is `bd` installed?')
+    console.error(err.stderr || err.message)
+    process.exit(1)
+  }
+
+  const raw = stdout.trim()
+  if (!raw || raw === 'null') {
+    console.log('No beads issues found.')
+    return
+  }
+
+  const issues: any[] = JSON.parse(raw)
+  if (!Array.isArray(issues) || issues.length === 0) {
+    console.log('No beads issues found.')
+    return
+  }
+
+  const dbPath = path.join(projectDir, '.taskforge', 'data.db')
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true })
+  const forge = new TaskForge({ dbPath })
+
+  let imported = 0
+  let skipped = 0
+  const errors: string[] = []
+
+  // Import actors first (any unique assignee/owner)
+  const assignees = new Set<string>()
+  for (const issue of issues) {
+    const a = issue.assignee || issue.owner
+    if (a) assignees.add(a)
+  }
+  for (const name of assignees) {
+    try {
+      const actors = await forge.actors.list()
+      const exists = actors.find((a: any) => a.name === name)
+      if (!exists) {
+        await forge.actors.create({ name, type: 'human' as const })
+      }
+    } catch {}
+  }
+
+  // Import issues
+  for (const issue of issues) {
+    try {
+      const rawType = issue.issue_type || 'task'
+      const type = rawType === 'bug' || rawType === 'feature' || rawType === 'epic' ? rawType : 'task'
+      await forge.tasks.create({
+        title: issue.title,
+        description: issue.description ?? '',
+        priority: Math.min(4, Math.max(0, Math.round(issue.priority ?? 2))) as 0 | 1 | 2 | 3 | 4,
+        type,
+        assignee: issue.assignee || issue.owner,
+        labels: issue.labels ?? [],
+        parentId: issue.parent_id,
+      })
+      imported++
+    } catch (err: any) {
+      errors.push(`Failed to import ${issue.id}: ${err.message}`)
+      skipped++
+    }
+  }
+
+  // Wire dependencies
+  for (const issue of issues) {
+    if (issue.dependencies?.length) {
+      for (const dep of issue.dependencies) {
+        try {
+          await forge.tasks.addDependency(issue.id, dep.id)
+        } catch {}
+      }
+    }
+  }
+
+  forge.stop().catch(() => {})
+
+  console.log(`\nMigration complete: ${imported} imported, ${skipped} skipped.`)
+  if (errors.length > 0) {
+    console.log('\nErrors:')
+    for (const err of errors) console.log(`  - ${err}`)
+  }
+  console.log(`\nTaskForge database: ${dbPath}`)
+}
+
 async function runDaemon(): Promise<void> {
   const args = parseArgs()
   const port = await findFreePort(args.port ?? parseInt(process.env.PORT ?? '3001', 10))
@@ -313,6 +417,7 @@ Usage: fonagents [command] [options]
 
 Commands:
   (none)              Start the daemon + manager agent
+  migrate             Import existing beads issues into TaskForge
   workers             List running workers and attach to one
   tail <worker-id>    Attach directly to a worker's tmux session
   help, --help, -h    Show this help
@@ -325,6 +430,7 @@ Options:
 Examples:
   fonagents                       Start daemon + manager
   fonagents --web-only            Start daemon only (open browser)
+  fonagents migrate               Import beads issues to TaskForge
   fonagents workers               List workers, pick one to tail
   fonagents tail m3abc12          Attach to a specific worker
 `)
@@ -335,6 +441,8 @@ async function main() {
 
   if (subcommand === 'help' || subcommand === '--help' || subcommand === '-h') {
     printHelp()
+  } else if (subcommand === 'migrate') {
+    await runMigrate()
   } else if (subcommand === 'workers') {
     await runWorkers()
   } else if (subcommand === 'tail') {

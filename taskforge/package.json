@@ -5,7 +5,8 @@
   "types": "./dist/index.d.ts",
   "workspaces": [
     "core",
-    "adapters/*"
+    "adapters/*",
+    "migration"
   ],
   "scripts": {
     "build": "npm run build --workspaces && tsc",

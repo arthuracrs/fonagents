@@ -203,6 +203,34 @@ describe('HttpServer', () => {
       expect(response.body[0].title).toBe('Task 1');
     });
 
+    it('should pass sort/limit/offset filter params to service', async () => {
+      await request((server as any).app)
+        .get('/api/tasks?status=open&type=bug&sort=priority:asc,createdAt:desc&limit=10&offset=5')
+        .expect(200);
+
+      expect(services.tasks.list).toHaveBeenCalledWith({
+        status: 'open',
+        type: 'bug',
+        sort: [
+          { field: 'priority', direction: 'asc' },
+          { field: 'createdAt', direction: 'desc' },
+        ],
+        limit: 10,
+        offset: 5,
+      });
+    });
+
+    it('should pass priority and parentId filter params', async () => {
+      await request((server as any).app)
+        .get('/api/tasks?priority=1&parentId=parent-1')
+        .expect(200);
+
+      expect(services.tasks.list).toHaveBeenCalledWith({
+        priority: 1,
+        parentId: 'parent-1',
+      });
+    });
+
     it('should create a task', async () => {
       const response = await request((server as any).app)
         .post('/api/tasks')

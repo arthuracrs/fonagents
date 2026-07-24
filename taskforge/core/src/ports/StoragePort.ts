@@ -4,6 +4,11 @@ import type { Event } from '../domain/Event';
 import type { Gate } from '../domain/Gate';
 import type { Template } from '../domain/Template';
 
+export interface TaskSort {
+  field: 'createdAt' | 'updatedAt' | 'priority' | 'status' | 'title';
+  direction?: 'asc' | 'desc';
+}
+
 export interface TaskFilter {
   status?: TaskStatus;
   assignee?: string;
@@ -11,6 +16,9 @@ export interface TaskFilter {
   type?: TaskType;
   parentId?: string;
   priority?: Task['priority'];
+  sort?: TaskSort[];
+  limit?: number;
+  offset?: number;
 }
 
 export interface StoragePort {

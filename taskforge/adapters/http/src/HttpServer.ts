@@ -23,11 +23,21 @@ export class HttpServer {
 
   constructor(private readonly services: HttpServerServices) {
     this.app.use(express.json());
+    this.app.use(this.requestLogger);
     this.app.use(this.corsMiddleware);
     this.setupRoutes();
     this.server = createServer(this.app);
     this.wss = new WebSocketServer({ server: this.server, path: '/api/events/stream' });
     this.setupWebSocket();
+  }
+
+  private requestLogger(req: Request, res: Response, next: NextFunction): void {
+    const start = Date.now();
+    res.on('finish', () => {
+      const ms = Date.now() - start;
+      console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${ms}ms`);
+    });
+    next();
   }
 
   private corsMiddleware(_req: Request, res: Response, next: NextFunction): void {
@@ -88,23 +98,27 @@ export class HttpServer {
 
   private listTasks = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { status, assignee, labels, type, sort, limit, offset } = req.query;
+      const { status, assignee, labels, type, priority, parentId, sort, limit, offset } = req.query;
       const filter: Record<string, unknown> = {};
       if (status) filter.status = status;
       if (assignee) filter.assignee = assignee;
       if (labels) filter.labels = (labels as string).split(',');
       if (type) filter.type = type;
+      if (priority !== undefined) filter.priority = Number(priority);
+      if (parentId) filter.parentId = parentId;
 
-      let tasks = await this.services.tasks.list(filter as any);
-
-      if (sort === 'priority') {
-        tasks.sort((a, b) => a.priority - b.priority);
+      // Sort: comma-separated field:dir pairs (e.g. "priority:asc,createdAt:desc")
+      if (sort) {
+        filter.sort = (sort as string).split(',').map((part: string) => {
+          const [field, dir] = part.split(':');
+          return { field: field || 'createdAt', direction: (dir || 'desc') as 'asc' | 'desc' };
+        });
       }
 
-      const start = offset ? parseInt(offset as string, 10) : 0;
-      const end = limit ? start + parseInt(limit as string, 10) : tasks.length;
-      tasks = tasks.slice(start, end);
+      if (limit !== undefined) filter.limit = Number(limit);
+      if (offset !== undefined) filter.offset = Number(offset);
 
+      const tasks = await this.services.tasks.list(filter as any);
       res.json(tasks);
     } catch (err) {
       next(err);
@@ -113,6 +127,11 @@ export class HttpServer {
 
   private createTask = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const { title } = req.body;
+      if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        res.status(400).json({ error: 'title is required and must be a non-empty string' });
+        return;
+      }
       const task = await this.services.tasks.create(req.body);
       res.status(201).json(task);
     } catch (err) {

@@ -1,7 +1,6 @@
 export interface DaemonConfig {
     port?: number;
     projectDir?: string;
-    bdPath?: string;
     anagentPath?: string;
     managerRuntimeId?: string;
 }

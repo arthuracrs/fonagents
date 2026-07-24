@@ -348,11 +348,11 @@ CREATE INDEX idx_gates_status ON gates(status);
 **Goal**: Build the foundation with basic CRUD and events
 
 **Deliverables**:
-- [ ] TaskForge core library (TypeScript)
-- [ ] SQLite storage layer
-- [ ] Basic REST API (tasks, actors, events)
-- [ ] Event system (in-memory + WebSocket)
-- [ ] Unit tests for core functionality
+- [x] TaskForge core library (TypeScript)
+- [x] SQLite storage layer
+- [x] Basic REST API (tasks, actors, events)
+- [x] Event system (in-memory + WebSocket)
+- [x] Unit tests for core functionality
 
 **Success Criteria**:
 - Can create, read, update, delete tasks
@@ -364,11 +364,11 @@ CREATE INDEX idx_gates_status ON gates(status);
 **Goal**: Add dependencies, templates, gates
 
 **Deliverables**:
-- [ ] Dependency tracking (graph, blocking)
-- [ ] Template system (decomposition)
-- [ ] Gate system (human-in-the-loop)
-- [ ] Advanced queries (filtering, sorting, pagination)
-- [ ] Integration tests
+- [x] Dependency tracking (graph, blocking)
+- [x] Template system (decomposition)
+- [x] Gate system (human-in-the-loop)
+- [x] Advanced queries (filtering, sorting, pagination)
+- [x] Integration tests — adapter ↔ daemon (48 tests)
 
 **Success Criteria**:
 - Tasks can depend on other tasks
@@ -381,11 +381,11 @@ CREATE INDEX idx_gates_status ON gates(status);
 **Goal**: Integrate with fonagents, migrate from beads
 
 **Deliverables**:
-- [ ] TaskForge adapter for fonagents (implements IssueTrackerPort)
-- [ ] Migration tool (beads JSONL → TaskForge)
-- [ ] Update fonagents to use TaskForge by default
-- [ ] Update frontend to use new API
-- [ ] Documentation
+- [x] TaskForge adapter for fonagents (implements IssueTrackerPort)
+- [x] Migration tool (beads JSONL → TaskForge)
+- [x] Update fonagents to use TaskForge by default
+- [x] Frontend already points at daemon API — routes match
+- [x] Documentation — main README, taskforge/README, adapter README
 
 **Success Criteria**:
 - fonagents can use TaskForge instead of beads
@@ -398,11 +398,11 @@ CREATE INDEX idx_gates_status ON gates(status);
 **Goal**: Production readiness
 
 **Deliverables**:
-- [ ] Performance optimization
-- [ ] Error handling and recovery
-- [ ] Monitoring and logging
-- [ ] Security review
-- [ ] User documentation
+- [x] Performance optimization — SQLite indexes on status, assignee, type, priority, parent, created_at; events by task/timestamp; gates by task/status
+- [ ] Error handling and recovery — middleware exists, parameterized queries prevent injection
+- [x] Monitoring and logging — request logging (method, url, status, duration); health endpoint
+- [x] Security review — parameterized SQL queries (no injection); input validation on createTask
+- [x] User documentation — main README, taskforge/README, adapter README
 
 **Success Criteria**:
 - System handles 10k+ tasks efficiently
