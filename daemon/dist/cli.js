@@ -444,778 +444,6 @@ var require_dist = __commonJS({
   }
 });
 
-// ../taskforge/node_modules/better-sqlite3/lib/util.js
-var require_util = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/util.js"(exports2) {
-    "use strict";
-    exports2.getBooleanOption = (options, key) => {
-      let value = false;
-      if (key in options && typeof (value = options[key]) !== "boolean") {
-        throw new TypeError(`Expected the "${key}" option to be a boolean`);
-      }
-      return value;
-    };
-    exports2.cppdb = Symbol();
-    exports2.inspect = Symbol.for("nodejs.util.inspect.custom");
-  }
-});
-
-// ../taskforge/node_modules/better-sqlite3/lib/sqlite-error.js
-var require_sqlite_error = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/sqlite-error.js"(exports2, module2) {
-    "use strict";
-    var descriptor = { value: "SqliteError", writable: true, enumerable: false, configurable: true };
-    function SqliteError(message, code) {
-      if (new.target !== SqliteError) {
-        return new SqliteError(message, code);
-      }
-      if (typeof code !== "string") {
-        throw new TypeError("Expected second argument to be a string");
-      }
-      Error.call(this, message);
-      descriptor.value = "" + message;
-      Object.defineProperty(this, "message", descriptor);
-      Error.captureStackTrace(this, SqliteError);
-      this.code = code;
-    }
-    Object.setPrototypeOf(SqliteError, Error);
-    Object.setPrototypeOf(SqliteError.prototype, Error.prototype);
-    Object.defineProperty(SqliteError.prototype, "name", descriptor);
-    module2.exports = SqliteError;
-  }
-});
-
-// ../taskforge/node_modules/file-uri-to-path/index.js
-var require_file_uri_to_path = __commonJS({
-  "../taskforge/node_modules/file-uri-to-path/index.js"(exports2, module2) {
-    var sep = require("path").sep || "/";
-    module2.exports = fileUriToPath;
-    function fileUriToPath(uri) {
-      if ("string" != typeof uri || uri.length <= 7 || "file://" != uri.substring(0, 7)) {
-        throw new TypeError("must pass in a file:// URI to convert to a file path");
-      }
-      var rest = decodeURI(uri.substring(7));
-      var firstSlash = rest.indexOf("/");
-      var host = rest.substring(0, firstSlash);
-      var path4 = rest.substring(firstSlash + 1);
-      if ("localhost" == host) host = "";
-      if (host) {
-        host = sep + sep + host;
-      }
-      path4 = path4.replace(/^(.+)\|/, "$1:");
-      if (sep == "\\") {
-        path4 = path4.replace(/\//g, "\\");
-      }
-      if (/^.+\:/.test(path4)) {
-      } else {
-        path4 = sep + path4;
-      }
-      return host + path4;
-    }
-  }
-});
-
-// ../taskforge/node_modules/bindings/bindings.js
-var require_bindings = __commonJS({
-  "../taskforge/node_modules/bindings/bindings.js"(exports2, module2) {
-    var fs4 = require("fs");
-    var path4 = require("path");
-    var fileURLToPath = require_file_uri_to_path();
-    var join = path4.join;
-    var dirname = path4.dirname;
-    var exists = fs4.accessSync && function(path5) {
-      try {
-        fs4.accessSync(path5);
-      } catch (e) {
-        return false;
-      }
-      return true;
-    } || fs4.existsSync || path4.existsSync;
-    var defaults = {
-      arrow: process.env.NODE_BINDINGS_ARROW || " \u2192 ",
-      compiled: process.env.NODE_BINDINGS_COMPILED_DIR || "compiled",
-      platform: process.platform,
-      arch: process.arch,
-      nodePreGyp: "node-v" + process.versions.modules + "-" + process.platform + "-" + process.arch,
-      version: process.versions.node,
-      bindings: "bindings.node",
-      try: [
-        // node-gyp's linked version in the "build" dir
-        ["module_root", "build", "bindings"],
-        // node-waf and gyp_addon (a.k.a node-gyp)
-        ["module_root", "build", "Debug", "bindings"],
-        ["module_root", "build", "Release", "bindings"],
-        // Debug files, for development (legacy behavior, remove for node v0.9)
-        ["module_root", "out", "Debug", "bindings"],
-        ["module_root", "Debug", "bindings"],
-        // Release files, but manually compiled (legacy behavior, remove for node v0.9)
-        ["module_root", "out", "Release", "bindings"],
-        ["module_root", "Release", "bindings"],
-        // Legacy from node-waf, node <= 0.4.x
-        ["module_root", "build", "default", "bindings"],
-        // Production "Release" buildtype binary (meh...)
-        ["module_root", "compiled", "version", "platform", "arch", "bindings"],
-        // node-qbs builds
-        ["module_root", "addon-build", "release", "install-root", "bindings"],
-        ["module_root", "addon-build", "debug", "install-root", "bindings"],
-        ["module_root", "addon-build", "default", "install-root", "bindings"],
-        // node-pre-gyp path ./lib/binding/{node_abi}-{platform}-{arch}
-        ["module_root", "lib", "binding", "nodePreGyp", "bindings"]
-      ]
-    };
-    function bindings(opts) {
-      if (typeof opts == "string") {
-        opts = { bindings: opts };
-      } else if (!opts) {
-        opts = {};
-      }
-      Object.keys(defaults).map(function(i2) {
-        if (!(i2 in opts)) opts[i2] = defaults[i2];
-      });
-      if (!opts.module_root) {
-        opts.module_root = exports2.getRoot(exports2.getFileName());
-      }
-      if (path4.extname(opts.bindings) != ".node") {
-        opts.bindings += ".node";
-      }
-      var requireFunc = typeof __webpack_require__ === "function" ? __non_webpack_require__ : require;
-      var tries = [], i = 0, l = opts.try.length, n, b, err;
-      for (; i < l; i++) {
-        n = join.apply(
-          null,
-          opts.try[i].map(function(p) {
-            return opts[p] || p;
-          })
-        );
-        tries.push(n);
-        try {
-          b = opts.path ? requireFunc.resolve(n) : requireFunc(n);
-          if (!opts.path) {
-            b.path = n;
-          }
-          return b;
-        } catch (e) {
-          if (e.code !== "MODULE_NOT_FOUND" && e.code !== "QUALIFIED_PATH_RESOLUTION_FAILED" && !/not find/i.test(e.message)) {
-            throw e;
-          }
-        }
-      }
-      err = new Error(
-        "Could not locate the bindings file. Tried:\n" + tries.map(function(a) {
-          return opts.arrow + a;
-        }).join("\n")
-      );
-      err.tries = tries;
-      throw err;
-    }
-    module2.exports = exports2 = bindings;
-    exports2.getFileName = function getFileName(calling_file) {
-      var origPST = Error.prepareStackTrace, origSTL = Error.stackTraceLimit, dummy = {}, fileName;
-      Error.stackTraceLimit = 10;
-      Error.prepareStackTrace = function(e, st) {
-        for (var i = 0, l = st.length; i < l; i++) {
-          fileName = st[i].getFileName();
-          if (fileName !== __filename) {
-            if (calling_file) {
-              if (fileName !== calling_file) {
-                return;
-              }
-            } else {
-              return;
-            }
-          }
-        }
-      };
-      Error.captureStackTrace(dummy);
-      dummy.stack;
-      Error.prepareStackTrace = origPST;
-      Error.stackTraceLimit = origSTL;
-      var fileSchema = "file://";
-      if (fileName.indexOf(fileSchema) === 0) {
-        fileName = fileURLToPath(fileName);
-      }
-      return fileName;
-    };
-    exports2.getRoot = function getRoot(file) {
-      var dir = dirname(file), prev;
-      while (true) {
-        if (dir === ".") {
-          dir = process.cwd();
-        }
-        if (exists(join(dir, "package.json")) || exists(join(dir, "node_modules"))) {
-          return dir;
-        }
-        if (prev === dir) {
-          throw new Error(
-            'Could not find module root given file: "' + file + '". Do you have a `package.json` file? '
-          );
-        }
-        prev = dir;
-        dir = join(dir, "..");
-      }
-    };
-  }
-});
-
-// ../taskforge/node_modules/better-sqlite3/lib/methods/wrappers.js
-var require_wrappers = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/methods/wrappers.js"(exports2) {
-    "use strict";
-    var { cppdb } = require_util();
-    exports2.prepare = function prepare(sql) {
-      return this[cppdb].prepare(sql, this, false);
-    };
-    exports2.exec = function exec2(sql) {
-      this[cppdb].exec(sql);
-      return this;
-    };
-    exports2.close = function close() {
-      this[cppdb].close();
-      return this;
-    };
-    exports2.loadExtension = function loadExtension(...args) {
-      this[cppdb].loadExtension(...args);
-      return this;
-    };
-    exports2.defaultSafeIntegers = function defaultSafeIntegers(...args) {
-      this[cppdb].defaultSafeIntegers(...args);
-      return this;
-    };
-    exports2.unsafeMode = function unsafeMode(...args) {
-      this[cppdb].unsafeMode(...args);
-      return this;
-    };
-    exports2.getters = {
-      name: {
-        get: function name() {
-          return this[cppdb].name;
-        },
-        enumerable: true
-      },
-      open: {
-        get: function open() {
-          return this[cppdb].open;
-        },
-        enumerable: true
-      },
-      inTransaction: {
-        get: function inTransaction() {
-          return this[cppdb].inTransaction;
-        },
-        enumerable: true
-      },
-      readonly: {
-        get: function readonly() {
-          return this[cppdb].readonly;
-        },
-        enumerable: true
-      },
-      memory: {
-        get: function memory() {
-          return this[cppdb].memory;
-        },
-        enumerable: true
-      }
-    };
-  }
-});
-
-// ../taskforge/node_modules/better-sqlite3/lib/methods/transaction.js
-var require_transaction = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/methods/transaction.js"(exports2, module2) {
-    "use strict";
-    var { cppdb } = require_util();
-    var controllers = /* @__PURE__ */ new WeakMap();
-    module2.exports = function transaction(fn) {
-      if (typeof fn !== "function") throw new TypeError("Expected first argument to be a function");
-      const db = this[cppdb];
-      const controller = getController(db, this);
-      const { apply } = Function.prototype;
-      const properties = {
-        default: { value: wrapTransaction(apply, fn, db, controller.default) },
-        deferred: { value: wrapTransaction(apply, fn, db, controller.deferred) },
-        immediate: { value: wrapTransaction(apply, fn, db, controller.immediate) },
-        exclusive: { value: wrapTransaction(apply, fn, db, controller.exclusive) },
-        database: { value: this, enumerable: true }
-      };
-      Object.defineProperties(properties.default.value, properties);
-      Object.defineProperties(properties.deferred.value, properties);
-      Object.defineProperties(properties.immediate.value, properties);
-      Object.defineProperties(properties.exclusive.value, properties);
-      return properties.default.value;
-    };
-    var getController = (db, self) => {
-      let controller = controllers.get(db);
-      if (!controller) {
-        const shared = {
-          commit: db.prepare("COMMIT", self, false),
-          rollback: db.prepare("ROLLBACK", self, false),
-          savepoint: db.prepare("SAVEPOINT `	_bs3.	`", self, false),
-          release: db.prepare("RELEASE `	_bs3.	`", self, false),
-          rollbackTo: db.prepare("ROLLBACK TO `	_bs3.	`", self, false)
-        };
-        controllers.set(db, controller = {
-          default: Object.assign({ begin: db.prepare("BEGIN", self, false) }, shared),
-          deferred: Object.assign({ begin: db.prepare("BEGIN DEFERRED", self, false) }, shared),
-          immediate: Object.assign({ begin: db.prepare("BEGIN IMMEDIATE", self, false) }, shared),
-          exclusive: Object.assign({ begin: db.prepare("BEGIN EXCLUSIVE", self, false) }, shared)
-        });
-      }
-      return controller;
-    };
-    var wrapTransaction = (apply, fn, db, { begin, commit, rollback, savepoint, release, rollbackTo }) => function sqliteTransaction() {
-      let before, after, undo;
-      if (db.inTransaction) {
-        before = savepoint;
-        after = release;
-        undo = rollbackTo;
-      } else {
-        before = begin;
-        after = commit;
-        undo = rollback;
-      }
-      before.run();
-      try {
-        const result = apply.call(fn, this, arguments);
-        if (result && typeof result.then === "function") {
-          throw new TypeError("Transaction function cannot return a promise");
-        }
-        after.run();
-        return result;
-      } catch (ex) {
-        if (db.inTransaction) {
-          undo.run();
-          if (undo !== rollback) after.run();
-        }
-        throw ex;
-      }
-    };
-  }
-});
-
-// ../taskforge/node_modules/better-sqlite3/lib/methods/pragma.js
-var require_pragma = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/methods/pragma.js"(exports2, module2) {
-    "use strict";
-    var { getBooleanOption, cppdb } = require_util();
-    module2.exports = function pragma(source, options) {
-      if (options == null) options = {};
-      if (typeof source !== "string") throw new TypeError("Expected first argument to be a string");
-      if (typeof options !== "object") throw new TypeError("Expected second argument to be an options object");
-      const simple = getBooleanOption(options, "simple");
-      const stmt = this[cppdb].prepare(`PRAGMA ${source}`, this, true);
-      return simple ? stmt.pluck().get() : stmt.all();
-    };
-  }
-});
-
-// ../taskforge/node_modules/better-sqlite3/lib/methods/backup.js
-var require_backup = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/methods/backup.js"(exports2, module2) {
-    "use strict";
-    var fs4 = require("fs");
-    var path4 = require("path");
-    var { promisify: promisify3 } = require("util");
-    var { cppdb } = require_util();
-    var fsAccess = promisify3(fs4.access);
-    module2.exports = async function backup(filename, options) {
-      if (options == null) options = {};
-      if (typeof filename !== "string") throw new TypeError("Expected first argument to be a string");
-      if (typeof options !== "object") throw new TypeError("Expected second argument to be an options object");
-      filename = filename.trim();
-      const attachedName = "attached" in options ? options.attached : "main";
-      const handler = "progress" in options ? options.progress : null;
-      if (!filename) throw new TypeError("Backup filename cannot be an empty string");
-      if (filename === ":memory:") throw new TypeError('Invalid backup filename ":memory:"');
-      if (typeof attachedName !== "string") throw new TypeError('Expected the "attached" option to be a string');
-      if (!attachedName) throw new TypeError('The "attached" option cannot be an empty string');
-      if (handler != null && typeof handler !== "function") throw new TypeError('Expected the "progress" option to be a function');
-      await fsAccess(path4.dirname(filename)).catch(() => {
-        throw new TypeError("Cannot save backup because the directory does not exist");
-      });
-      const isNewFile = await fsAccess(filename).then(() => false, () => true);
-      return runBackup(this[cppdb].backup(this, attachedName, filename, isNewFile), handler || null);
-    };
-    var runBackup = (backup, handler) => {
-      let rate = 0;
-      let useDefault = true;
-      return new Promise((resolve, reject) => {
-        setImmediate(function step() {
-          try {
-            const progress = backup.transfer(rate);
-            if (!progress.remainingPages) {
-              backup.close();
-              resolve(progress);
-              return;
-            }
-            if (useDefault) {
-              useDefault = false;
-              rate = 100;
-            }
-            if (handler) {
-              const ret = handler(progress);
-              if (ret !== void 0) {
-                if (typeof ret === "number" && ret === ret) rate = Math.max(0, Math.min(2147483647, Math.round(ret)));
-                else throw new TypeError("Expected progress callback to return a number or undefined");
-              }
-            }
-            setImmediate(step);
-          } catch (err) {
-            backup.close();
-            reject(err);
-          }
-        });
-      });
-    };
-  }
-});
-
-// ../taskforge/node_modules/better-sqlite3/lib/methods/serialize.js
-var require_serialize = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/methods/serialize.js"(exports2, module2) {
-    "use strict";
-    var { cppdb } = require_util();
-    module2.exports = function serialize(options) {
-      if (options == null) options = {};
-      if (typeof options !== "object") throw new TypeError("Expected first argument to be an options object");
-      const attachedName = "attached" in options ? options.attached : "main";
-      if (typeof attachedName !== "string") throw new TypeError('Expected the "attached" option to be a string');
-      if (!attachedName) throw new TypeError('The "attached" option cannot be an empty string');
-      return this[cppdb].serialize(attachedName);
-    };
-  }
-});
-
-// ../taskforge/node_modules/better-sqlite3/lib/methods/function.js
-var require_function = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/methods/function.js"(exports2, module2) {
-    "use strict";
-    var { getBooleanOption, cppdb } = require_util();
-    module2.exports = function defineFunction(name, options, fn) {
-      if (options == null) options = {};
-      if (typeof options === "function") {
-        fn = options;
-        options = {};
-      }
-      if (typeof name !== "string") throw new TypeError("Expected first argument to be a string");
-      if (typeof fn !== "function") throw new TypeError("Expected last argument to be a function");
-      if (typeof options !== "object") throw new TypeError("Expected second argument to be an options object");
-      if (!name) throw new TypeError("User-defined function name cannot be an empty string");
-      const safeIntegers = "safeIntegers" in options ? +getBooleanOption(options, "safeIntegers") : 2;
-      const deterministic = getBooleanOption(options, "deterministic");
-      const directOnly = getBooleanOption(options, "directOnly");
-      const varargs = getBooleanOption(options, "varargs");
-      let argCount = -1;
-      if (!varargs) {
-        argCount = fn.length;
-        if (!Number.isInteger(argCount) || argCount < 0) throw new TypeError("Expected function.length to be a positive integer");
-        if (argCount > 100) throw new RangeError("User-defined functions cannot have more than 100 arguments");
-      }
-      this[cppdb].function(fn, name, argCount, safeIntegers, deterministic, directOnly);
-      return this;
-    };
-  }
-});
-
-// ../taskforge/node_modules/better-sqlite3/lib/methods/aggregate.js
-var require_aggregate = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/methods/aggregate.js"(exports2, module2) {
-    "use strict";
-    var { getBooleanOption, cppdb } = require_util();
-    module2.exports = function defineAggregate(name, options) {
-      if (typeof name !== "string") throw new TypeError("Expected first argument to be a string");
-      if (typeof options !== "object" || options === null) throw new TypeError("Expected second argument to be an options object");
-      if (!name) throw new TypeError("User-defined function name cannot be an empty string");
-      const start = "start" in options ? options.start : null;
-      const step = getFunctionOption(options, "step", true);
-      const inverse = getFunctionOption(options, "inverse", false);
-      const result = getFunctionOption(options, "result", false);
-      const safeIntegers = "safeIntegers" in options ? +getBooleanOption(options, "safeIntegers") : 2;
-      const deterministic = getBooleanOption(options, "deterministic");
-      const directOnly = getBooleanOption(options, "directOnly");
-      const varargs = getBooleanOption(options, "varargs");
-      let argCount = -1;
-      if (!varargs) {
-        argCount = Math.max(getLength(step), inverse ? getLength(inverse) : 0);
-        if (argCount > 0) argCount -= 1;
-        if (argCount > 100) throw new RangeError("User-defined functions cannot have more than 100 arguments");
-      }
-      this[cppdb].aggregate(start, step, inverse, result, name, argCount, safeIntegers, deterministic, directOnly);
-      return this;
-    };
-    var getFunctionOption = (options, key, required) => {
-      const value = key in options ? options[key] : null;
-      if (typeof value === "function") return value;
-      if (value != null) throw new TypeError(`Expected the "${key}" option to be a function`);
-      if (required) throw new TypeError(`Missing required option "${key}"`);
-      return null;
-    };
-    var getLength = ({ length }) => {
-      if (Number.isInteger(length) && length >= 0) return length;
-      throw new TypeError("Expected function.length to be a positive integer");
-    };
-  }
-});
-
-// ../taskforge/node_modules/better-sqlite3/lib/methods/table.js
-var require_table = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/methods/table.js"(exports2, module2) {
-    "use strict";
-    var { cppdb } = require_util();
-    module2.exports = function defineTable(name, factory) {
-      if (typeof name !== "string") throw new TypeError("Expected first argument to be a string");
-      if (!name) throw new TypeError("Virtual table module name cannot be an empty string");
-      let eponymous = false;
-      if (typeof factory === "object" && factory !== null) {
-        eponymous = true;
-        factory = defer(parseTableDefinition(factory, "used", name));
-      } else {
-        if (typeof factory !== "function") throw new TypeError("Expected second argument to be a function or a table definition object");
-        factory = wrapFactory(factory);
-      }
-      this[cppdb].table(factory, name, eponymous);
-      return this;
-    };
-    function wrapFactory(factory) {
-      return function virtualTableFactory(moduleName, databaseName, tableName, ...args) {
-        const thisObject = {
-          module: moduleName,
-          database: databaseName,
-          table: tableName
-        };
-        const def = apply.call(factory, thisObject, args);
-        if (typeof def !== "object" || def === null) {
-          throw new TypeError(`Virtual table module "${moduleName}" did not return a table definition object`);
-        }
-        return parseTableDefinition(def, "returned", moduleName);
-      };
-    }
-    function parseTableDefinition(def, verb, moduleName) {
-      if (!hasOwnProperty.call(def, "rows")) {
-        throw new TypeError(`Virtual table module "${moduleName}" ${verb} a table definition without a "rows" property`);
-      }
-      if (!hasOwnProperty.call(def, "columns")) {
-        throw new TypeError(`Virtual table module "${moduleName}" ${verb} a table definition without a "columns" property`);
-      }
-      const rows = def.rows;
-      if (typeof rows !== "function" || Object.getPrototypeOf(rows) !== GeneratorFunctionPrototype) {
-        throw new TypeError(`Virtual table module "${moduleName}" ${verb} a table definition with an invalid "rows" property (should be a generator function)`);
-      }
-      let columns = def.columns;
-      if (!Array.isArray(columns) || !(columns = [...columns]).every((x) => typeof x === "string")) {
-        throw new TypeError(`Virtual table module "${moduleName}" ${verb} a table definition with an invalid "columns" property (should be an array of strings)`);
-      }
-      if (columns.length !== new Set(columns).size) {
-        throw new TypeError(`Virtual table module "${moduleName}" ${verb} a table definition with duplicate column names`);
-      }
-      if (!columns.length) {
-        throw new RangeError(`Virtual table module "${moduleName}" ${verb} a table definition with zero columns`);
-      }
-      let parameters;
-      if (hasOwnProperty.call(def, "parameters")) {
-        parameters = def.parameters;
-        if (!Array.isArray(parameters) || !(parameters = [...parameters]).every((x) => typeof x === "string")) {
-          throw new TypeError(`Virtual table module "${moduleName}" ${verb} a table definition with an invalid "parameters" property (should be an array of strings)`);
-        }
-      } else {
-        parameters = inferParameters(rows);
-      }
-      if (parameters.length !== new Set(parameters).size) {
-        throw new TypeError(`Virtual table module "${moduleName}" ${verb} a table definition with duplicate parameter names`);
-      }
-      if (parameters.length > 32) {
-        throw new RangeError(`Virtual table module "${moduleName}" ${verb} a table definition with more than the maximum number of 32 parameters`);
-      }
-      for (const parameter of parameters) {
-        if (columns.includes(parameter)) {
-          throw new TypeError(`Virtual table module "${moduleName}" ${verb} a table definition with column "${parameter}" which was ambiguously defined as both a column and parameter`);
-        }
-      }
-      let safeIntegers = 2;
-      if (hasOwnProperty.call(def, "safeIntegers")) {
-        const bool = def.safeIntegers;
-        if (typeof bool !== "boolean") {
-          throw new TypeError(`Virtual table module "${moduleName}" ${verb} a table definition with an invalid "safeIntegers" property (should be a boolean)`);
-        }
-        safeIntegers = +bool;
-      }
-      let directOnly = false;
-      if (hasOwnProperty.call(def, "directOnly")) {
-        directOnly = def.directOnly;
-        if (typeof directOnly !== "boolean") {
-          throw new TypeError(`Virtual table module "${moduleName}" ${verb} a table definition with an invalid "directOnly" property (should be a boolean)`);
-        }
-      }
-      const columnDefinitions = [
-        ...parameters.map(identifier).map((str) => `${str} HIDDEN`),
-        ...columns.map(identifier)
-      ];
-      return [
-        `CREATE TABLE x(${columnDefinitions.join(", ")});`,
-        wrapGenerator(rows, new Map(columns.map((x, i) => [x, parameters.length + i])), moduleName),
-        parameters,
-        safeIntegers,
-        directOnly
-      ];
-    }
-    function wrapGenerator(generator, columnMap, moduleName) {
-      return function* virtualTable(...args) {
-        const output = args.map((x) => Buffer.isBuffer(x) ? Buffer.from(x) : x);
-        for (let i = 0; i < columnMap.size; ++i) {
-          output.push(null);
-        }
-        for (const row of generator(...args)) {
-          if (Array.isArray(row)) {
-            extractRowArray(row, output, columnMap.size, moduleName);
-            yield output;
-          } else if (typeof row === "object" && row !== null) {
-            extractRowObject(row, output, columnMap, moduleName);
-            yield output;
-          } else {
-            throw new TypeError(`Virtual table module "${moduleName}" yielded something that isn't a valid row object`);
-          }
-        }
-      };
-    }
-    function extractRowArray(row, output, columnCount, moduleName) {
-      if (row.length !== columnCount) {
-        throw new TypeError(`Virtual table module "${moduleName}" yielded a row with an incorrect number of columns`);
-      }
-      const offset = output.length - columnCount;
-      for (let i = 0; i < columnCount; ++i) {
-        output[i + offset] = row[i];
-      }
-    }
-    function extractRowObject(row, output, columnMap, moduleName) {
-      let count = 0;
-      for (const key of Object.keys(row)) {
-        const index = columnMap.get(key);
-        if (index === void 0) {
-          throw new TypeError(`Virtual table module "${moduleName}" yielded a row with an undeclared column "${key}"`);
-        }
-        output[index] = row[key];
-        count += 1;
-      }
-      if (count !== columnMap.size) {
-        throw new TypeError(`Virtual table module "${moduleName}" yielded a row with missing columns`);
-      }
-    }
-    function inferParameters({ length }) {
-      if (!Number.isInteger(length) || length < 0) {
-        throw new TypeError("Expected function.length to be a positive integer");
-      }
-      const params = [];
-      for (let i = 0; i < length; ++i) {
-        params.push(`$${i + 1}`);
-      }
-      return params;
-    }
-    var { hasOwnProperty } = Object.prototype;
-    var { apply } = Function.prototype;
-    var GeneratorFunctionPrototype = Object.getPrototypeOf(function* () {
-    });
-    var identifier = (str) => `"${str.replace(/"/g, '""')}"`;
-    var defer = (x) => () => x;
-  }
-});
-
-// ../taskforge/node_modules/better-sqlite3/lib/methods/inspect.js
-var require_inspect = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/methods/inspect.js"(exports2, module2) {
-    "use strict";
-    var DatabaseInspection = function Database() {
-    };
-    module2.exports = function inspect(depth, opts) {
-      return Object.assign(new DatabaseInspection(), this);
-    };
-  }
-});
-
-// ../taskforge/node_modules/better-sqlite3/lib/database.js
-var require_database = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/database.js"(exports2, module2) {
-    "use strict";
-    var fs4 = require("fs");
-    var path4 = require("path");
-    var util = require_util();
-    var SqliteError = require_sqlite_error();
-    var DEFAULT_ADDON;
-    function Database(filenameGiven, options) {
-      if (new.target == null) {
-        return new Database(filenameGiven, options);
-      }
-      let buffer;
-      if (Buffer.isBuffer(filenameGiven)) {
-        buffer = filenameGiven;
-        filenameGiven = ":memory:";
-      }
-      if (filenameGiven == null) filenameGiven = "";
-      if (options == null) options = {};
-      if (typeof filenameGiven !== "string") throw new TypeError("Expected first argument to be a string");
-      if (typeof options !== "object") throw new TypeError("Expected second argument to be an options object");
-      if ("readOnly" in options) throw new TypeError('Misspelled option "readOnly" should be "readonly"');
-      if ("memory" in options) throw new TypeError('Option "memory" was removed in v7.0.0 (use ":memory:" filename instead)');
-      const filename = filenameGiven.trim();
-      const anonymous = filename === "" || filename === ":memory:";
-      const readonly = util.getBooleanOption(options, "readonly");
-      const fileMustExist = util.getBooleanOption(options, "fileMustExist");
-      const timeout = "timeout" in options ? options.timeout : 5e3;
-      const verbose = "verbose" in options ? options.verbose : null;
-      const nativeBinding = "nativeBinding" in options ? options.nativeBinding : null;
-      if (readonly && anonymous && !buffer) throw new TypeError("In-memory/temporary databases cannot be readonly");
-      if (!Number.isInteger(timeout) || timeout < 0) throw new TypeError('Expected the "timeout" option to be a positive integer');
-      if (timeout > 2147483647) throw new RangeError('Option "timeout" cannot be greater than 2147483647');
-      if (verbose != null && typeof verbose !== "function") throw new TypeError('Expected the "verbose" option to be a function');
-      if (nativeBinding != null && typeof nativeBinding !== "string" && typeof nativeBinding !== "object") throw new TypeError('Expected the "nativeBinding" option to be a string or addon object');
-      let addon;
-      if (nativeBinding == null) {
-        addon = DEFAULT_ADDON || (DEFAULT_ADDON = require_bindings()("better_sqlite3.node"));
-      } else if (typeof nativeBinding === "string") {
-        const requireFunc = typeof __non_webpack_require__ === "function" ? __non_webpack_require__ : require;
-        addon = requireFunc(path4.resolve(nativeBinding).replace(/(\.node)?$/, ".node"));
-      } else {
-        addon = nativeBinding;
-      }
-      if (!addon.isInitialized) {
-        addon.setErrorConstructor(SqliteError);
-        addon.isInitialized = true;
-      }
-      if (!anonymous && !fs4.existsSync(path4.dirname(filename))) {
-        throw new TypeError("Cannot open database because the directory does not exist");
-      }
-      Object.defineProperties(this, {
-        [util.cppdb]: { value: new addon.Database(filename, filenameGiven, anonymous, readonly, fileMustExist, timeout, verbose || null, buffer || null) },
-        ...wrappers.getters
-      });
-    }
-    var wrappers = require_wrappers();
-    Database.prototype.prepare = wrappers.prepare;
-    Database.prototype.transaction = require_transaction();
-    Database.prototype.pragma = require_pragma();
-    Database.prototype.backup = require_backup();
-    Database.prototype.serialize = require_serialize();
-    Database.prototype.function = require_function();
-    Database.prototype.aggregate = require_aggregate();
-    Database.prototype.table = require_table();
-    Database.prototype.loadExtension = wrappers.loadExtension;
-    Database.prototype.exec = wrappers.exec;
-    Database.prototype.close = wrappers.close;
-    Database.prototype.defaultSafeIntegers = wrappers.defaultSafeIntegers;
-    Database.prototype.unsafeMode = wrappers.unsafeMode;
-    Database.prototype[util.inspect] = require_inspect();
-    module2.exports = Database;
-  }
-});
-
-// ../taskforge/node_modules/better-sqlite3/lib/index.js
-var require_lib = __commonJS({
-  "../taskforge/node_modules/better-sqlite3/lib/index.js"(exports2, module2) {
-    "use strict";
-    module2.exports = require_database();
-    module2.exports.SqliteError = require_sqlite_error();
-  }
-});
-
 // ../taskforge/adapters/sqlite/dist/SQLiteStorage.js
 var require_SQLiteStorage = __commonJS({
   "../taskforge/adapters/sqlite/dist/SQLiteStorage.js"(exports2) {
@@ -1225,7 +453,7 @@ var require_SQLiteStorage = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SQLiteStorage = void 0;
-    var better_sqlite3_1 = __importDefault(require_lib());
+    var better_sqlite3_1 = __importDefault(require("better-sqlite3"));
     var node_crypto_1 = require("node:crypto");
     var SQLiteStorage = class {
       db;
@@ -6401,7 +5629,7 @@ var require_extend_node = __commonJS({
 });
 
 // ../taskforge/node_modules/iconv-lite/lib/index.js
-var require_lib2 = __commonJS({
+var require_lib = __commonJS({
   "../taskforge/node_modules/iconv-lite/lib/index.js"(exports2, module2) {
     "use strict";
     var Buffer2 = require_safer().Buffer;
@@ -6548,7 +5776,7 @@ var require_raw_body = __commonJS({
     var asyncHooks = tryRequireAsyncHooks();
     var bytes = require_bytes();
     var createError = require_http_errors();
-    var iconv = require_lib2();
+    var iconv = require_lib();
     var unpipe = require_unpipe();
     module2.exports = getRawBody;
     var ICONV_ENCODING_MESSAGE_REGEXP = /^Encoding not recognized: /;
@@ -6897,7 +6125,7 @@ var require_read = __commonJS({
     var createError = require_http_errors();
     var destroy = require_destroy();
     var getBody = require_raw_body();
-    var iconv = require_lib2();
+    var iconv = require_lib();
     var onFinished = require_on_finished();
     var unpipe = require_unpipe();
     var zlib = require("zlib");
@@ -18702,7 +17930,7 @@ var require_parse = __commonJS({
 });
 
 // ../taskforge/node_modules/qs/lib/index.js
-var require_lib3 = __commonJS({
+var require_lib2 = __commonJS({
   "../taskforge/node_modules/qs/lib/index.js"(exports2, module2) {
     "use strict";
     var stringify = require_stringify();
@@ -18854,7 +18082,7 @@ var require_urlencoded = __commonJS({
       }
       switch (name) {
         case "qs":
-          mod = require_lib3();
+          mod = require_lib2();
           break;
         case "querystring":
           mod = require("querystring");
@@ -20111,7 +19339,7 @@ var require_query = __commonJS({
     "use strict";
     var merge = require_utils_merge();
     var parseUrl = require_parseurl();
-    var qs = require_lib3();
+    var qs = require_lib2();
     module2.exports = function query(options) {
       var opts = merge({}, options);
       var queryparse = qs.parse;
@@ -22192,7 +21420,7 @@ var require_utils2 = __commonJS({
     var mime = require_send().mime;
     var etag = require_etag();
     var proxyaddr = require_proxy_addr();
-    var qs = require_lib3();
+    var qs = require_lib2();
     var querystring = require("querystring");
     exports2.etag = createETagGenerator({ weak: false });
     exports2.wetag = createETagGenerator({ weak: true });
@@ -34317,7 +33545,7 @@ var require_streams2 = __commonJS({
 });
 
 // ../node_modules/iconv-lite/lib/index.js
-var require_lib4 = __commonJS({
+var require_lib3 = __commonJS({
   "../node_modules/iconv-lite/lib/index.js"(exports2, module2) {
     "use strict";
     var Buffer2 = require_safer2().Buffer;
@@ -34493,7 +33721,7 @@ var require_raw_body2 = __commonJS({
     var asyncHooks = tryRequireAsyncHooks();
     var bytes = require_bytes2();
     var createError = require_http_errors2();
-    var iconv = require_lib4();
+    var iconv = require_lib3();
     var unpipe = require_unpipe2();
     module2.exports = getRawBody;
     var ICONV_ENCODING_MESSAGE_REGEXP = /^Encoding not recognized: /;
@@ -44821,7 +44049,7 @@ var require_read2 = __commonJS({
     "use strict";
     var createError = require_http_errors2();
     var getBody = require_raw_body2();
-    var iconv = require_lib4();
+    var iconv = require_lib3();
     var onFinished = require_on_finished2();
     var zlib = require("node:zlib");
     var hasBody = require_type_is2().hasBody;
@@ -47683,7 +46911,7 @@ var require_parse2 = __commonJS({
 });
 
 // ../node_modules/qs/lib/index.js
-var require_lib5 = __commonJS({
+var require_lib4 = __commonJS({
   "../node_modules/qs/lib/index.js"(exports2, module2) {
     "use strict";
     var stringify = require_stringify2();
@@ -47704,7 +46932,7 @@ var require_urlencoded2 = __commonJS({
     var createError = require_http_errors2();
     var debug = require_src2()("body-parser:urlencoded");
     var read = require_read2();
-    var qs = require_lib5();
+    var qs = require_lib4();
     var { normalizeOptions } = require_utils3();
     module2.exports = urlencoded;
     function urlencoded(options) {
@@ -49171,7 +48399,7 @@ var require_utils5 = __commonJS({
     var etag = require_etag2();
     var mime = require_mime_types2();
     var proxyaddr = require_proxy_addr2();
-    var qs = require_lib5();
+    var qs = require_lib4();
     var querystring = require("node:querystring");
     var { Buffer: Buffer2 } = require("node:buffer");
     exports2.methods = METHODS.map((method) => method.toLowerCase());
@@ -53221,7 +52449,7 @@ var require_object_assign = __commonJS({
 });
 
 // ../node_modules/cors/lib/index.js
-var require_lib6 = __commonJS({
+var require_lib5 = __commonJS({
   "../node_modules/cors/lib/index.js"(exports2, module2) {
     (function() {
       "use strict";
@@ -53438,7 +52666,7 @@ var require_HttpSseAdapter = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.createHttpSseApp = createHttpSseApp2;
     var express_1 = __importDefault(require_express4());
-    var cors_1 = __importDefault(require_lib6());
+    var cors_1 = __importDefault(require_lib5());
     var fs_1 = __importDefault(require("fs"));
     var path_1 = __importDefault(require("path"));
     function createHttpSseApp2(command, managerTools, eventBus, config) {
