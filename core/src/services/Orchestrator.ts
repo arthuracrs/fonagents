@@ -20,7 +20,7 @@ import type {
 } from '../ports/AgentRuntimePort.js'
 import type { IssueCreateInput, IssueFilter, IssueTrackerPort, IssueUpdatePatch } from '../ports/IssueTrackerPort.js'
 import type { ManagerToolsPort } from '../ports/ManagerToolsPort.js'
-import { buildWorkerSystemPrompt } from '@fonagents/prompts'
+import { buildWorkerSystemPrompt, DEFAULT_PROMPT } from '../prompts/index.js'
 import type { UiCommandPort } from '../ports/UiCommandPort.js'
 import type { UiEvent, UiEventPort } from '../ports/UiEventPort.js'
 
@@ -114,7 +114,7 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
     const spawnInput: SpawnWorkerInput = {
       issueId: input.issueId,
       runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
-      prompt: input.prompt ?? `Resolve ${input.issueId}: ${issue.title}`,
+      prompt: input.prompt ?? DEFAULT_PROMPT.replaceAll('{id}', input.issueId),
       systemPrompt: buildWorkerSystemPrompt(input.issueId),
       mode: 'tmux',
       cwd: this.config.projectDir,

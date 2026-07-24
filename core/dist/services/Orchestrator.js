@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Orchestrator = void 0;
-const prompts_1 = require("@fonagents/prompts");
+const index_js_1 = require("../prompts/index.js");
 const DEFAULT_MANAGER_RUNTIME = 'opencode';
 class Orchestrator {
     tracker;
@@ -71,8 +71,8 @@ class Orchestrator {
         const spawnInput = {
             issueId: input.issueId,
             runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
-            prompt: input.prompt ?? `Resolve ${input.issueId}: ${issue.title}`,
-            systemPrompt: (0, prompts_1.buildWorkerSystemPrompt)(input.issueId),
+            prompt: input.prompt ?? index_js_1.DEFAULT_PROMPT.replaceAll('{id}', input.issueId),
+            systemPrompt: (0, index_js_1.buildWorkerSystemPrompt)(input.issueId),
             mode: 'tmux',
             cwd: this.config.projectDir,
         };

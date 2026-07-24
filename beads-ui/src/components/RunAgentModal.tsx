@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../api";
-import { DEFAULT_PROMPT } from "@fonagents/prompts";
+import { DEFAULT_PROMPT } from "@fonagents/core";
 import type { IssueModel } from "../models/IssueModel";
 import type { AgentExecution, AgentRuntime } from "../types";
 

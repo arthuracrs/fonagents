@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@fonagents/core": "^0.0.0",
-    "@fonagents/prompts": "^0.0.0",
     "@fonagents/beads-adapter": "^0.0.0",
     "@fonagents/anagent-adapter": "^0.0.0",
     "@fonagents/http-sse-adapter": "^0.0.0",

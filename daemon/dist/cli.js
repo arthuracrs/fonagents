@@ -159,9 +159,9 @@ var require_ManagerToolsPort = __commonJS({
   }
 });
 
-// ../prompts/dist/worker-user-default.js
+// ../core/dist/prompts/worker-user-default.js
 var require_worker_user_default = __commonJS({
-  "../prompts/dist/worker-user-default.js"(exports2) {
+  "../core/dist/prompts/worker-user-default.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DEFAULT_PROMPT = void 0;
@@ -182,9 +182,9 @@ Write comments in plain text only \u2014 no Markdown syntax. Use line breaks and
   }
 });
 
-// ../prompts/dist/worker-system.js
+// ../core/dist/prompts/worker-system.js
 var require_worker_system = __commonJS({
-  "../prompts/dist/worker-system.js"(exports2) {
+  "../core/dist/prompts/worker-system.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.buildWorkerSystemPrompt = buildWorkerSystemPrompt;
@@ -194,9 +194,9 @@ var require_worker_system = __commonJS({
   }
 });
 
-// ../prompts/dist/index.js
-var require_dist = __commonJS({
-  "../prompts/dist/index.js"(exports2) {
+// ../core/dist/prompts/index.js
+var require_prompts = __commonJS({
+  "../core/dist/prompts/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.buildWorkerSystemPrompt = exports2.DEFAULT_PROMPT = void 0;
@@ -217,7 +217,7 @@ var require_Orchestrator = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Orchestrator = void 0;
-    var prompts_1 = require_dist();
+    var index_js_1 = require_prompts();
     var DEFAULT_MANAGER_RUNTIME = "opencode";
     var Orchestrator2 = class {
       tracker;
@@ -321,8 +321,8 @@ var require_Orchestrator = __commonJS({
         const spawnInput = {
           issueId: input.issueId,
           runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
-          prompt: input.prompt ?? `Resolve ${input.issueId}: ${issue.title}`,
-          systemPrompt: (0, prompts_1.buildWorkerSystemPrompt)(input.issueId),
+          prompt: input.prompt ?? index_js_1.DEFAULT_PROMPT.replaceAll("{id}", input.issueId),
+          systemPrompt: (0, index_js_1.buildWorkerSystemPrompt)(input.issueId),
           mode: "tmux",
           cwd: this.config.projectDir
         };
@@ -415,7 +415,7 @@ var require_Orchestrator = __commonJS({
 });
 
 // ../core/dist/index.js
-var require_dist2 = __commonJS({
+var require_dist = __commonJS({
   "../core/dist/index.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
@@ -442,6 +442,8 @@ var require_dist2 = __commonJS({
     __exportStar(require_UiEventPort(), exports2);
     __exportStar(require_ManagerToolsPort(), exports2);
     __exportStar(require_Orchestrator(), exports2);
+    __exportStar(require_worker_user_default(), exports2);
+    __exportStar(require_worker_system(), exports2);
   }
 });
 
@@ -819,7 +821,7 @@ var require_BeadsAdapter = __commonJS({
 });
 
 // ../adapters/beads/dist/index.js
-var require_dist3 = __commonJS({
+var require_dist2 = __commonJS({
   "../adapters/beads/dist/index.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
@@ -1099,7 +1101,7 @@ var require_AnagentAdapter = __commonJS({
 });
 
 // ../adapters/anagent/dist/index.js
-var require_dist4 = __commonJS({
+var require_dist3 = __commonJS({
   "../adapters/anagent/dist/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -6722,7 +6724,7 @@ var require_on_finished = __commonJS({
 });
 
 // ../node_modules/type-is/node_modules/content-type/dist/index.js
-var require_dist5 = __commonJS({
+var require_dist4 = __commonJS({
   "../node_modules/type-is/node_modules/content-type/dist/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -16431,7 +16433,7 @@ var require_media_typer = __commonJS({
 var require_type_is = __commonJS({
   "../node_modules/type-is/index.js"(exports2, module2) {
     "use strict";
-    var contentType = require_dist5();
+    var contentType = require_dist4();
     var mime = require_mime_types();
     var typer = require_media_typer();
     module2.exports = typeofrequest;
@@ -16519,7 +16521,7 @@ var require_type_is = __commonJS({
 });
 
 // ../node_modules/body-parser/node_modules/content-type/dist/index.js
-var require_dist6 = __commonJS({
+var require_dist5 = __commonJS({
   "../node_modules/body-parser/node_modules/content-type/dist/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -16654,7 +16656,7 @@ var require_utils = __commonJS({
   "../node_modules/body-parser/lib/utils.js"(exports2, module2) {
     "use strict";
     var bytes = require_bytes();
-    var contentType = require_dist6();
+    var contentType = require_dist5();
     var typeis = require_type_is();
     module2.exports = {
       getCharset,
@@ -21261,7 +21263,7 @@ var require_is_promise = __commonJS({
 });
 
 // ../node_modules/path-to-regexp/dist/index.js
-var require_dist7 = __commonJS({
+var require_dist6 = __commonJS({
   "../node_modules/path-to-regexp/dist/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -21634,7 +21636,7 @@ var require_layer = __commonJS({
   "../node_modules/router/lib/layer.js"(exports2, module2) {
     "use strict";
     var isPromise = require_is_promise();
-    var pathRegexp = require_dist7();
+    var pathRegexp = require_dist6();
     var debug = require_src()("router:layer");
     var deprecate = require_depd()("router");
     var TRAILING_SLASH_REGEXP = /\/+$/;
@@ -25653,7 +25655,7 @@ var require_McpConfigWriter = __commonJS({
 });
 
 // ../adapters/http-sse/dist/index.js
-var require_dist8 = __commonJS({
+var require_dist7 = __commonJS({
   "../adapters/http-sse/dist/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -25674,10 +25676,10 @@ var require_dist8 = __commonJS({
 });
 
 // src/daemon.ts
-var import_core = __toESM(require_dist2());
-var import_beads_adapter = __toESM(require_dist3());
-var import_anagent_adapter = __toESM(require_dist4());
-var import_http_sse_adapter = __toESM(require_dist8());
+var import_core = __toESM(require_dist());
+var import_beads_adapter = __toESM(require_dist2());
+var import_anagent_adapter = __toESM(require_dist3());
+var import_http_sse_adapter = __toESM(require_dist7());
 
 // src/overseer.ts
 var import_child_process = require("child_process");

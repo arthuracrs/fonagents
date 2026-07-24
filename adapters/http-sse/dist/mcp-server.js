@@ -159,9 +159,9 @@ var require_ManagerToolsPort = __commonJS({
   }
 });
 
-// ../../prompts/dist/worker-user-default.js
+// ../../core/dist/prompts/worker-user-default.js
 var require_worker_user_default = __commonJS({
-  "../../prompts/dist/worker-user-default.js"(exports2) {
+  "../../core/dist/prompts/worker-user-default.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DEFAULT_PROMPT = void 0;
@@ -182,9 +182,9 @@ Write comments in plain text only \u2014 no Markdown syntax. Use line breaks and
   }
 });
 
-// ../../prompts/dist/worker-system.js
+// ../../core/dist/prompts/worker-system.js
 var require_worker_system = __commonJS({
-  "../../prompts/dist/worker-system.js"(exports2) {
+  "../../core/dist/prompts/worker-system.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.buildWorkerSystemPrompt = buildWorkerSystemPrompt;
@@ -194,9 +194,9 @@ var require_worker_system = __commonJS({
   }
 });
 
-// ../../prompts/dist/index.js
-var require_dist = __commonJS({
-  "../../prompts/dist/index.js"(exports2) {
+// ../../core/dist/prompts/index.js
+var require_prompts = __commonJS({
+  "../../core/dist/prompts/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.buildWorkerSystemPrompt = exports2.DEFAULT_PROMPT = void 0;
@@ -217,7 +217,7 @@ var require_Orchestrator = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Orchestrator = void 0;
-    var prompts_1 = require_dist();
+    var index_js_1 = require_prompts();
     var DEFAULT_MANAGER_RUNTIME = "opencode";
     var Orchestrator = class {
       tracker;
@@ -321,8 +321,8 @@ var require_Orchestrator = __commonJS({
         const spawnInput = {
           issueId: input.issueId,
           runtimeId: input.runtimeId ?? this.config.managerRuntimeId ?? DEFAULT_MANAGER_RUNTIME,
-          prompt: input.prompt ?? `Resolve ${input.issueId}: ${issue.title}`,
-          systemPrompt: (0, prompts_1.buildWorkerSystemPrompt)(input.issueId),
+          prompt: input.prompt ?? index_js_1.DEFAULT_PROMPT.replaceAll("{id}", input.issueId),
+          systemPrompt: (0, index_js_1.buildWorkerSystemPrompt)(input.issueId),
           mode: "tmux",
           cwd: this.config.projectDir
         };
@@ -415,7 +415,7 @@ var require_Orchestrator = __commonJS({
 });
 
 // ../../core/dist/index.js
-var require_dist2 = __commonJS({
+var require_dist = __commonJS({
   "../../core/dist/index.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
@@ -442,11 +442,13 @@ var require_dist2 = __commonJS({
     __exportStar(require_UiEventPort(), exports2);
     __exportStar(require_ManagerToolsPort(), exports2);
     __exportStar(require_Orchestrator(), exports2);
+    __exportStar(require_worker_user_default(), exports2);
+    __exportStar(require_worker_system(), exports2);
   }
 });
 
 // src/mcp-server.ts
-var import_core = __toESM(require_dist2());
+var import_core = __toESM(require_dist());
 var daemonUrl = (() => {
   const idx = process.argv.indexOf("--daemon-url");
   return idx >= 0 ? process.argv[idx + 1] : "http://localhost:3001";

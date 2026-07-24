@@ -25,4 +25,6 @@ __exportStar(require("./ports/UiCommandPort.js"), exports);
 __exportStar(require("./ports/UiEventPort.js"), exports);
 __exportStar(require("./ports/ManagerToolsPort.js"), exports);
 __exportStar(require("./services/Orchestrator.js"), exports);
+__exportStar(require("./prompts/worker-user-default.js"), exports);
+__exportStar(require("./prompts/worker-system.js"), exports);
 //# sourceMappingURL=index.js.map

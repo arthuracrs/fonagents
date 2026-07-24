@@ -3,7 +3,7 @@ import { api } from "../api";
 import type { IssueModel } from "../models/IssueModel";
 import { ExecutionModel } from "../models/ExecutionModel";
 import type { AgentTrigger, ExecStatus } from "../types";
-import { DEFAULT_PROMPT } from "@fonagents/prompts";
+import { DEFAULT_PROMPT } from "@fonagents/core";
 import { RunAgentModal } from "./RunAgentModal";
 
 interface Props {
