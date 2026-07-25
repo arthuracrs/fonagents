@@ -54103,7 +54103,7 @@ async function runWorkers() {
   for (let i = 0; i < active.length; i++) {
     const w = active[i];
     const session = w.tmuxSession ? ` tmux: ${w.tmuxSession}` : "";
-    const shortId = w.id.length > 12 ? w.id.slice(0, 12) + "\u2026" : w.id;
+    const shortId = w.id;
     table.push([String(i + 1), shortId, w.issueId, w.runtimeId, w.status, session]);
   }
   const colWidths = table[0].map((_, ci) => Math.max(...table.map((r) => r[ci].length)));
@@ -54143,6 +54143,17 @@ async function runTail(workerId) {
     process.exit(1);
   }
   if (!worker || worker.error) {
+    try {
+      const all = await fetchJson(`http://localhost:${state.port}/api/workers`);
+      worker = all.find(
+        (w) => w.tmuxSession === workerId || w.issueId === workerId
+      );
+    } catch {
+      console.error(`Worker ${workerId} not found.`);
+      process.exit(1);
+    }
+  }
+  if (!worker) {
     console.error(`Worker ${workerId} not found.`);
     process.exit(1);
   }
