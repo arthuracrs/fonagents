@@ -176,6 +176,7 @@ You are a fonagents Worker. Execute the task assigned to you using the TaskForge
     projectDir,
     managerRuntimeId: managerRuntime,
     overseer: { enabled: overseerConfig.enabled, mode: overseerConfig.mode },
+    maxWorkers: parseInt(process.env.FONAGENTS_MAX_WORKERS || '5', 10),
   }
 
   const orchestrator = new Orchestrator(tracker, runtime, eventBus, orchestratorConfig)

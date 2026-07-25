@@ -63,6 +63,11 @@ class Orchestrator {
         return { moleculeId: mol.id, childIssueIds: children.map((c) => c.id) };
     }
     async dispatchWorker(input) {
+        const max = this.config.maxWorkers ?? 5;
+        const active = this.workerSubscriptions.size;
+        if (active >= max) {
+            throw new Error(`Cannot dispatch: ${active} workers already running (max ${max}). Wait for one to finish or increase the limit.`);
+        }
         const issue = await this.tracker.getIssue(input.issueId);
         if (!issue)
             throw new Error(`Cannot dispatch: issue ${input.issueId} not found`);

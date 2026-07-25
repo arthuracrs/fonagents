@@ -29,6 +29,7 @@ export interface OrchestratorConfig {
   projectDir: string
   managerRuntimeId?: string
   overseer?: { enabled: boolean; mode: string }
+  maxWorkers?: number
 }
 
 export class Orchestrator implements UiCommandPort, ManagerToolsPort {
@@ -105,6 +106,11 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
     runtimeId?: string
     prompt?: string
   }): Promise<{ workerId: WorkerId }> {
+    const max = this.config.maxWorkers ?? 5
+    const active = this.workerSubscriptions.size
+    if (active >= max) {
+      throw new Error(`Cannot dispatch: ${active} workers already running (max ${max}). Wait for one to finish or increase the limit.`)
+    }
     const issue = await this.tracker.getIssue(input.issueId)
     if (!issue) throw new Error(`Cannot dispatch: issue ${input.issueId} not found`)
     await this.tracker.claimIssue(input.issueId, 'manager')

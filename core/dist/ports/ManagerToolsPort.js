@@ -16,7 +16,7 @@ exports.MANAGER_TOOL_SCHEMAS = [
     },
     {
         name: 'dispatchWorker',
-        description: 'Dispatch a coding agent onto a ready task.',
+        description: 'Dispatch a coding agent onto a ready task. Respects a max-concurrent-workers limit (default 5, configurable via FONAGENTS_MAX_WORKERS).',
         inputSchema: {
             type: 'object',
             properties: {

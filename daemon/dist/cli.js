@@ -87,7 +87,7 @@ var require_ManagerToolsPort = __commonJS({
       },
       {
         name: "dispatchWorker",
-        description: "Dispatch a coding agent onto a ready task.",
+        description: "Dispatch a coding agent onto a ready task. Respects a max-concurrent-workers limit (default 5, configurable via FONAGENTS_MAX_WORKERS).",
         inputSchema: {
           type: "object",
           properties: {
@@ -504,6 +504,11 @@ var require_Orchestrator = __commonJS({
         return { moleculeId: mol.id, childIssueIds: children.map((c) => c.id) };
       }
       async dispatchWorker(input) {
+        const max = this.config.maxWorkers ?? 5;
+        const active = this.workerSubscriptions.size;
+        if (active >= max) {
+          throw new Error(`Cannot dispatch: ${active} workers already running (max ${max}). Wait for one to finish or increase the limit.`);
+        }
         const issue = await this.tracker.getIssue(input.issueId);
         if (!issue)
           throw new Error(`Cannot dispatch: issue ${input.issueId} not found`);
@@ -53813,7 +53818,8 @@ You are a fonagents Worker. Execute the task assigned to you using the TaskForge
   const orchestratorConfig = {
     projectDir,
     managerRuntimeId: managerRuntime,
-    overseer: { enabled: overseerConfig.enabled, mode: overseerConfig.mode }
+    overseer: { enabled: overseerConfig.enabled, mode: overseerConfig.mode },
+    maxWorkers: parseInt(process.env.FONAGENTS_MAX_WORKERS || "5", 10)
   };
   const orchestrator = new import_core.Orchestrator(tracker, runtime, eventBus, orchestratorConfig);
   _overseer = new Overseer(eventBus.events, overseerConfig, projectDir);

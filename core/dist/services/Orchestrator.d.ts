@@ -11,6 +11,7 @@ export interface OrchestratorConfig {
         enabled: boolean;
         mode: string;
     };
+    maxWorkers?: number;
 }
 export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
     private readonly tracker;
