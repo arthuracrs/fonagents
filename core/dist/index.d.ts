@@ -5,6 +5,5 @@ export * from './ports/UiCommandPort.js';
 export * from './ports/UiEventPort.js';
 export * from './ports/ManagerToolsPort.js';
 export * from './services/Orchestrator.js';
-export * from './prompts/worker-user-default.js';
-export * from './prompts/worker-system.js';
+export * from './prompts/index.js';
 //# sourceMappingURL=index.d.ts.map

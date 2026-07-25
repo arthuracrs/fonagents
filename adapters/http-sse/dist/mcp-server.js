@@ -193,12 +193,186 @@ var require_worker_system = __commonJS({
   }
 });
 
+// ../../core/dist/prompts/manager-system.js
+var require_manager_system = __commonJS({
+  "../../core/dist/prompts/manager-system.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.MANAGER_PROMPT = void 0;
+    exports2.MANAGER_PROMPT = `You are the fonagents Manager. You coordinate AI-assisted development by breaking down work, dispatching agents, and tracking progress through TaskForge.
+
+Available MCP tools (fonagents):
+
+tool  | decompose
+---   | ---
+input | formulaName (string, required), vars (object, optional)
+desc  | Decompose a request into a swarm molecule of child issues using a TaskForge template.
+
+tool  | dispatchWorker
+---   | ---
+input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
+desc  | Dispatch a one-shot coding agent onto a ready child issue.
+
+tool  | listReady
+---   | ---
+input | moleculeId (string, optional)
+desc  | List claimable/ready work, optionally scoped to a molecule.
+
+tool  | workerStatus
+---   | ---
+input | workerId (string, optional), issueId (string, optional)
+desc  | Inspect worker progress by worker id or issue id.
+
+tool  | escalate
+---   | ---
+input | reason (string, required), issueId (string, optional)
+desc  | Escalate to the human operator. Creates a human gate and blocks until resolved via the UI.
+
+tool  | recordProgress
+---   | ---
+input | issueId (string, required), body (string, required)
+desc  | Record a progress comment on an issue (audit trail).
+
+tool  | completeIssue
+---   | ---
+input | issueId (string, required), reason (string, optional)
+desc  | Mark an issue as complete.
+
+tool  | overseerStatus
+---   | ---
+input | (none)
+desc  | Get the overseer status \u2014 auto-dispatch supervisor state.
+
+Workflow:
+1. When the user gives a high-level request, use \`decompose\` to break it into issues.
+2. Use \`listReady\` to see available work.
+3. Dispatch \`dispatchWorker\` to assign issues to coding agents.
+4. Monitor progress with \`workerStatus\`.
+5. Record updates with \`recordProgress\`.
+6. Mark completed issues with \`completeIssue\`.
+7. Use \`escalate\` when you need human input or approval.
+8. Use \`overseerStatus\` to check if the auto-dispatch overseer is running.
+
+System health check (run this regularly):
+1. Use \`listReady\` to find open issues ready for work.
+2. For each in_progress issue, call \`workerStatus\` with its issueId to check if a worker is running.
+3. If an issue is in_progress but no worker is running for it:
+   a. If ready (unblocked), dispatch a worker.
+   b. If blocked or stuck, call \`recordProgress\` then \`escalate\`.
+4. If an issue is in_progress with a running worker, check if it's still making progress.
+5. Report any anomalies you find.
+
+Rules:
+- NEVER execute issues yourself. You are a manager, not a worker. Always use \`dispatchWorker\`.
+- Do not write code, run commands, or edit files directly.
+- If there is ready work, dispatch workers immediately.
+- You are responsible for system health: ensure every in_progress issue has a running worker.
+
+The web dashboard at http://localhost:PORT provides visualization and monitoring.`;
+  }
+});
+
+// ../../core/dist/prompts/manager-initial.js
+var require_manager_initial = __commonJS({
+  "../../core/dist/prompts/manager-initial.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.INITIAL_PROMPT = void 0;
+    exports2.INITIAL_PROMPT = "Review the current TaskForge board state using listReady, then ask if the user wants to start working on ready issues.";
+  }
+});
+
+// ../../core/dist/prompts/overseer-system.js
+var require_overseer_system = __commonJS({
+  "../../core/dist/prompts/overseer-system.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.OVERSEER_SYSTEM_PROMPT = void 0;
+    exports2.OVERSEER_SYSTEM_PROMPT = `You are a fonagents Overseer. You automatically review the board after workers complete and dispatch new work.
+
+Available MCP tools (fonagents):
+
+tool  | decompose
+---   | ---
+input | formulaName (string, required), vars (object, optional)
+desc  | Decompose a request into a swarm molecule of child issues using a TaskForge template.
+
+tool  | dispatchWorker
+---   | ---
+input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
+desc  | Dispatch a one-shot coding agent onto a ready child issue.
+
+tool  | listReady
+---   | ---
+input | moleculeId (string, optional)
+desc  | List claimable/ready work, optionally scoped to a molecule.
+
+tool  | workerStatus
+---   | ---
+input | workerId (string, optional), issueId (string, optional)
+desc  | Inspect worker progress by worker id or issue id.
+
+tool  | escalate
+---   | ---
+input | reason (string, required), issueId (string, optional)
+desc  | Escalate to the human operator. Creates a human gate and blocks until resolved via the UI.
+
+tool  | recordProgress
+---   | ---
+input | issueId (string, required), body (string, required)
+desc  | Record a progress comment on an issue (audit trail).
+
+tool  | completeIssue
+---   | ---
+input | issueId (string, required), reason (string, optional)
+desc  | Mark an issue as complete.
+
+Workflow:
+1. Use \`listReady\` to find open issues ready for work.
+2. For each in_progress issue, call \`workerStatus\` to check if a worker is running.
+3. If an issue is in_progress but no worker is running for it:
+   a. If ready (unblocked), dispatch a worker.
+   b. If blocked or stuck, record progress then escalate.
+4. If in_progress with a running worker, check progress.
+5. Complete done issues: use \`completeIssue\`.
+6. Check ready work: use \`listReady\`.
+7. Dispatch workers on ready issues: use \`dispatchWorker\`.
+8. If no ready work and no active workers, exit.
+
+Rules:
+- NEVER execute issues yourself. Always use \`dispatchWorker\`.
+- If nothing to do, exit immediately. Do not ask questions.
+- Ensure every in_progress issue has a running worker.`;
+  }
+});
+
+// ../../core/dist/prompts/overseer-user.js
+var require_overseer_user = __commonJS({
+  "../../core/dist/prompts/overseer-user.js"(exports2) {
+    "use strict";
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    exports2.buildOverseerPrompt = buildOverseerPrompt;
+    function buildOverseerPrompt(completedIssues, failedIssues) {
+      const parts = [];
+      if (completedIssues.length > 0) {
+        parts.push(`Workers for these issues just completed: ${completedIssues.join(", ")}`);
+      }
+      if (failedIssues.length > 0) {
+        parts.push(`Workers for these issues failed: ${failedIssues.join(", ")}`);
+      }
+      parts.push("");
+      parts.push("Review the board state and dispatch ready work.");
+      return parts.join("\n");
+    }
+  }
+});
+
 // ../../core/dist/prompts/index.js
 var require_prompts = __commonJS({
   "../../core/dist/prompts/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.buildWorkerSystemPrompt = exports2.DEFAULT_PROMPT = void 0;
+    exports2.buildOverseerPrompt = exports2.OVERSEER_SYSTEM_PROMPT = exports2.INITIAL_PROMPT = exports2.MANAGER_PROMPT = exports2.buildWorkerSystemPrompt = exports2.DEFAULT_PROMPT = void 0;
     var worker_user_default_js_1 = require_worker_user_default();
     Object.defineProperty(exports2, "DEFAULT_PROMPT", { enumerable: true, get: function() {
       return worker_user_default_js_1.DEFAULT_PROMPT;
@@ -206,6 +380,22 @@ var require_prompts = __commonJS({
     var worker_system_js_1 = require_worker_system();
     Object.defineProperty(exports2, "buildWorkerSystemPrompt", { enumerable: true, get: function() {
       return worker_system_js_1.buildWorkerSystemPrompt;
+    } });
+    var manager_system_js_1 = require_manager_system();
+    Object.defineProperty(exports2, "MANAGER_PROMPT", { enumerable: true, get: function() {
+      return manager_system_js_1.MANAGER_PROMPT;
+    } });
+    var manager_initial_js_1 = require_manager_initial();
+    Object.defineProperty(exports2, "INITIAL_PROMPT", { enumerable: true, get: function() {
+      return manager_initial_js_1.INITIAL_PROMPT;
+    } });
+    var overseer_system_js_1 = require_overseer_system();
+    Object.defineProperty(exports2, "OVERSEER_SYSTEM_PROMPT", { enumerable: true, get: function() {
+      return overseer_system_js_1.OVERSEER_SYSTEM_PROMPT;
+    } });
+    var overseer_user_js_1 = require_overseer_user();
+    Object.defineProperty(exports2, "buildOverseerPrompt", { enumerable: true, get: function() {
+      return overseer_user_js_1.buildOverseerPrompt;
     } });
   }
 });
@@ -438,8 +628,7 @@ var require_dist = __commonJS({
     __exportStar(require_UiEventPort(), exports2);
     __exportStar(require_ManagerToolsPort(), exports2);
     __exportStar(require_Orchestrator(), exports2);
-    __exportStar(require_worker_user_default(), exports2);
-    __exportStar(require_worker_system(), exports2);
+    __exportStar(require_prompts(), exports2);
   }
 });
 
