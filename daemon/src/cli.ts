@@ -211,19 +211,6 @@ async function runTail(workerId: string): Promise<void> {
   }
 
   if (!worker || (worker as any).error) {
-    // Fallback: search by tmux session name or issue ID
-    try {
-      const all = (await fetchJson(`http://localhost:${state.port}/api/workers`)) as any[]
-      worker = all.find((w: any) =>
-        w.tmuxSession === workerId || w.issueId === workerId
-      )
-    } catch {
-      console.error(`Worker ${workerId} not found.`)
-      process.exit(1)
-    }
-  }
-
-  if (!worker) {
     console.error(`Worker ${workerId} not found.`)
     process.exit(1)
   }

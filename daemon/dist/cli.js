@@ -54143,17 +54143,6 @@ async function runTail(workerId) {
     process.exit(1);
   }
   if (!worker || worker.error) {
-    try {
-      const all = await fetchJson(`http://localhost:${state.port}/api/workers`);
-      worker = all.find(
-        (w) => w.tmuxSession === workerId || w.issueId === workerId
-      );
-    } catch {
-      console.error(`Worker ${workerId} not found.`);
-      process.exit(1);
-    }
-  }
-  if (!worker) {
     console.error(`Worker ${workerId} not found.`);
     process.exit(1);
   }
