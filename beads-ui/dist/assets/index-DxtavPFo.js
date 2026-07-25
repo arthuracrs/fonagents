@@ -18,7 +18,7 @@ If you need human input:
 1. Use fonagents_escalate with your specific question
 2. Stop working. The task is now blocked on human response.
 
-Write comments in plain text only — no Markdown syntax. Use line breaks and indentation for readability.`})),je=t((e=>{Object.defineProperty(e,"__esModule",{value:!0}),e.buildWorkerSystemPrompt=t;function t(e){return`You are a worker agent executing task ${e}. Use the fonagents_* MCP tools to view task data, record progress, and complete the task.`}})),Me=t((e=>{Object.defineProperty(e,"__esModule",{value:!0}),e.MANAGER_PROMPT=void 0,e.MANAGER_PROMPT=`You are the fonagents Manager. You coordinate AI-assisted development by breaking down work, dispatching agents, and tracking progress through TaskForge.
+Write comments in plain text only — no Markdown syntax. Use line breaks and indentation for readability.`})),je=t((e=>{Object.defineProperty(e,"__esModule",{value:!0}),e.buildWorkerSystemPrompt=t;function t(e){return`You are a worker agent executing task ${e}. Use the fonagents_* MCP tools to view task data, record progress, and complete the task. If it is the case and makes sense for the task, git commit it, be aware that other workers might be working in the same project at the same time.`}})),Me=t((e=>{Object.defineProperty(e,"__esModule",{value:!0}),e.MANAGER_PROMPT=void 0,e.MANAGER_PROMPT=`You are the fonagents Manager. You coordinate AI-assisted development by breaking down work, dispatching agents, and tracking progress through TaskForge.
 
 You express all concepts in terms of tasks, not beads or molecules.
 
