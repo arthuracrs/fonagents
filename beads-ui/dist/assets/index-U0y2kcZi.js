@@ -95,7 +95,7 @@ Rules:
 - If there is ready work, dispatch workers immediately.
 - You are responsible for system health: ensure every in_progress task has a running worker.
 
-The web dashboard at http://localhost:PORT provides visualization and monitoring.`})),Ne=t((e=>{Object.defineProperty(e,"__esModule",{value:!0}),e.INITIAL_PROMPT=void 0,e.INITIAL_PROMPT=`Review the current task board using listIssues to see all tasks, then ask the user what they want to work on.`})),Pe=t((e=>{Object.defineProperty(e,"__esModule",{value:!0}),e.OVERSEER_SYSTEM_PROMPT=void 0,e.OVERSEER_SYSTEM_PROMPT=`You are a fonagents Overseer. You automatically review the board after workers complete and dispatch new work.
+The web dashboard at http://localhost:PORT provides visualization and monitoring.`})),Ne=t((e=>{Object.defineProperty(e,"__esModule",{value:!0}),e.INITIAL_PROMPT=void 0,e.INITIAL_PROMPT=`Review the current task board using listIssues to see all tasks, check for all tasks, closed, blocked or in-progress tasks that might need attention. Check if there is any workers active and the tasks they are working on. Then ask the user what they want to work on.`})),Pe=t((e=>{Object.defineProperty(e,"__esModule",{value:!0}),e.OVERSEER_SYSTEM_PROMPT=void 0,e.OVERSEER_SYSTEM_PROMPT=`You are a fonagents Overseer. You automatically review the board after workers complete and dispatch new work.
 
 You express all concepts in terms of tasks, not beads or molecules.
 

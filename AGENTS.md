@@ -79,3 +79,7 @@ beads-ui/       # React frontend (served by the daemon)
 
 The core has zero knowledge of any adapter. To swap any
 adapter (e.g. taskforge → Linear, web → terminal), implement the corresponding port.
+
+## Some rules
+
+after implement a feature deploy it
