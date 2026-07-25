@@ -186,6 +186,15 @@ export class TaskForgeAdapter {
             blockers: t.dependencies ?? [],
         }));
     }
+    async resetStaleTasks() {
+        const tasks = await this.forge.tasks.list({ status: 'in_progress' });
+        const reset = [];
+        for (const task of tasks) {
+            const updated = await this.forge.tasks.update(task.id, { status: 'open' });
+            reset.push(toIssue(updated));
+        }
+        return reset;
+    }
     async listFormulas() {
         const templates = await this.forge.templates.list();
         return templates.map((t) => ({

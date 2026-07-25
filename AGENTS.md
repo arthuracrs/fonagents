@@ -82,4 +82,5 @@ adapter (e.g. taskforge → Linear, web → terminal), implement the correspondi
 
 ## Some rules
 
-after implement a feature deploy it
+after implement a feature deploy it.
+run this to update the tool: npm uninstall -g fonagents && npm install -g https://github.com/arthuracrs/fonagents/archive/main.tar.gz

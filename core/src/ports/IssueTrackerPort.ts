@@ -37,6 +37,9 @@ export interface IssueTrackerPort {
   // ── Ready work ───────────────────────────────────────────────────────────────
   readyWork(opts?: ReadyWorkOpts): Promise<ReadyWork[]>
 
+  // ── Stale task recovery ──────────────────────────────────────────────────────
+  resetStaleTasks(): Promise<Issue[]>
+
   // ── Molecules & formulas ─────────────────────────────────────────────────────
   listFormulas(): Promise<FormulaSummary[]>
   showFormula(name: string): Promise<unknown>

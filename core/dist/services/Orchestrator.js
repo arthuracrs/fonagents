@@ -129,6 +129,19 @@ class Orchestrator {
         await this.tracker.closeIssue(input.issueId, input.reason);
         this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'closed' });
     }
+    async resetStaleTasks() {
+        const inProgress = await this.tracker.listIssues({ status: 'in_progress' });
+        const resetIds = [];
+        for (const issue of inProgress) {
+            const workers = this.runtime.getWorkersForIssue(issue.id);
+            if (workers.length === 0) {
+                await this.tracker.updateIssue(issue.id, { status: 'open' });
+                resetIds.push(issue.id);
+                this.emit({ type: 'issue_changed', issueId: issue.id, change: 'reset' });
+            }
+        }
+        return { resetIssueIds: resetIds };
+    }
     async overseerStatus() {
         return {
             enabled: this.config.overseer?.enabled ?? true,

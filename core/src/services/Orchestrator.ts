@@ -179,6 +179,20 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
     this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'closed' })
   }
 
+  async resetStaleTasks(): Promise<{ resetIssueIds: IssueId[] }> {
+    const inProgress = await this.tracker.listIssues({ status: 'in_progress' })
+    const resetIds: IssueId[] = []
+    for (const issue of inProgress) {
+      const workers = this.runtime.getWorkersForIssue(issue.id)
+      if (workers.length === 0) {
+        await this.tracker.updateIssue(issue.id, { status: 'open' })
+        resetIds.push(issue.id)
+        this.emit({ type: 'issue_changed', issueId: issue.id, change: 'reset' })
+      }
+    }
+    return { resetIssueIds: resetIds }
+  }
+
   async overseerStatus(): Promise<{ enabled: boolean; mode: string; activeOverseers: number; queueLength: number }> {
     return {
       enabled: this.config.overseer?.enabled ?? true,

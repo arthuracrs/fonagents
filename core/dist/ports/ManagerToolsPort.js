@@ -90,6 +90,14 @@ exports.MANAGER_TOOL_SCHEMAS = [
         },
     },
     {
+        name: 'resetStaleTasks',
+        description: 'Reset in_progress tasks with no active workers back to open. Use when listReady returns empty but tasks are stuck in_progress with zero running workers.',
+        inputSchema: {
+            type: 'object',
+            properties: {},
+        },
+    },
+    {
         name: 'overseerStatus',
         description: 'Get the overseer status — auto-dispatch supervisor that automatically dispatches workers after each worker completes.',
         inputSchema: {

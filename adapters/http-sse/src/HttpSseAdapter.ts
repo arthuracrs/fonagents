@@ -300,6 +300,8 @@ async function executeManagerTool(
       return tools.completeIssue(args as { issueId: string; reason?: string })
     case 'overseerStatus':
       return tools.overseerStatus()
+    case 'resetStaleTasks':
+      return tools.resetStaleTasks()
     default:
       throw new Error(`Unknown tool: ${name}`)
   }

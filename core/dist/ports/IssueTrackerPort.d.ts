@@ -13,6 +13,7 @@ export interface IssueTrackerPort {
     addDependency(childId: IssueId, parentId: IssueId, type?: string): Promise<void>;
     children(parentId: IssueId): Promise<Issue[]>;
     readyWork(opts?: ReadyWorkOpts): Promise<ReadyWork[]>;
+    resetStaleTasks(): Promise<Issue[]>;
     listFormulas(): Promise<FormulaSummary[]>;
     showFormula(name: string): Promise<unknown>;
     pourMolecule(formulaName: string, vars: Record<string, string>, opts?: {

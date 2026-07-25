@@ -213,6 +213,16 @@ export class TaskForgeAdapter implements IssueTrackerPort {
     }));
   }
 
+  async resetStaleTasks(): Promise<Issue[]> {
+    const tasks = await this.forge.tasks.list({ status: 'in_progress' });
+    const reset: Issue[] = [];
+    for (const task of tasks) {
+      const updated = await this.forge.tasks.update(task.id, { status: 'open' });
+      reset.push(toIssue(updated));
+    }
+    return reset;
+  }
+
   async listFormulas(): Promise<FormulaSummary[]> {
     const templates = await this.forge.templates.list();
     return templates.map((t: any) => ({

@@ -50,6 +50,10 @@ export interface ManagerToolsPort {
   // Mark an issue as complete. Distinct from UiCommandPort.closeIssue.
   completeIssue(input: { issueId: IssueId; reason?: string }): Promise<void>
 
+  // Reset in_progress tasks that have no active workers back to open.
+  // Recovers from stale state after machine reboots or crashed workers.
+  resetStaleTasks(): Promise<{ resetIssueIds: IssueId[] }>
+
   // Get the overseer status (auto-dispatch supervisor).
   overseerStatus(): Promise<{
     enabled: boolean
@@ -153,6 +157,14 @@ export const MANAGER_TOOL_SCHEMAS: ToolSchema[] = [
       type: 'object',
       properties: { issueId: { type: 'string' }, reason: { type: 'string' } },
       required: ['issueId'],
+    },
+  },
+  {
+    name: 'resetStaleTasks',
+    description: 'Reset in_progress tasks with no active workers back to open. Use when listReady returns empty but tasks are stuck in_progress with zero running workers.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
     },
   },
   {

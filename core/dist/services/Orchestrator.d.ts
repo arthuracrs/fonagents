@@ -85,6 +85,9 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
         issueId: IssueId;
         reason?: string;
     }): Promise<void>;
+    resetStaleTasks(): Promise<{
+        resetIssueIds: IssueId[];
+    }>;
     overseerStatus(): Promise<{
         enabled: boolean;
         mode: string;

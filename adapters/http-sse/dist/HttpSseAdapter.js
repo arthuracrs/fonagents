@@ -259,6 +259,8 @@ async function executeManagerTool(tools, name, args) {
             return tools.completeIssue(args);
         case 'overseerStatus':
             return tools.overseerStatus();
+        case 'resetStaleTasks':
+            return tools.resetStaleTasks();
         default:
             throw new Error(`Unknown tool: ${name}`);
     }

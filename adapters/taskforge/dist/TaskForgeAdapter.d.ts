@@ -23,6 +23,7 @@ export declare class TaskForgeAdapter implements IssueTrackerPort {
         assignee?: string;
         claim?: boolean;
     }): Promise<ReadyWork[]>;
+    resetStaleTasks(): Promise<Issue[]>;
     listFormulas(): Promise<FormulaSummary[]>;
     showFormula(name: string): Promise<unknown>;
     pourMolecule(formulaName: string, vars: Record<string, string>, opts?: {

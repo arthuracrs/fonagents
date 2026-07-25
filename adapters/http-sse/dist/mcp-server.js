@@ -161,6 +161,14 @@ var require_ManagerToolsPort = __commonJS({
         }
       },
       {
+        name: "resetStaleTasks",
+        description: "Reset in_progress tasks with no active workers back to open. Use when listReady returns empty but tasks are stuck in_progress with zero running workers.",
+        inputSchema: {
+          type: "object",
+          properties: {}
+        }
+      },
+      {
         name: "overseerStatus",
         description: "Get the overseer status \u2014 auto-dispatch supervisor that automatically dispatches workers after each worker completes.",
         inputSchema: {
@@ -263,6 +271,11 @@ tool  | overseerStatus
 input | (none)
 desc  | Get the overseer status \u2014 auto-dispatch supervisor state.
 
+tool  | resetStaleTasks
+---   | ---
+input | (none)
+desc  | Reset in_progress tasks with no active workers back to open. Recovers from stale state after crashes or reboots.
+
 Workflow:
 1. On startup, use \`listIssues\` to survey the full task board.
 2. When the user gives a high-level request, use \`decompose\` to break it into tasks.
@@ -276,12 +289,13 @@ Workflow:
 
 System health check (run this regularly):
 1. Use \`listIssues\` to see all tasks and their statuses across the board.
-2. For each in_progress task, call \`workerStatus\` with its issueId to check if a worker is running.
-3. If a task is in_progress but no worker is running for it:
+2. If ALL tasks are in_progress but \`workerStatus\` shows zero active workers, call \`resetStaleTasks\` to recover.
+3. For each in_progress task, call \`workerStatus\` with its issueId to check if a worker is running.
+4. If a task is in_progress but no worker is running for it:
    a. If ready (unblocked), dispatch a worker.
    b. If blocked or stuck, call \`recordProgress\` then \`escalate\`.
-4. If a task is in_progress with a running worker, check if it's still making progress.
-5. Report any anomalies you find.
+5. If a task is in_progress with a running worker, check if it's still making progress.
+6. Report any anomalies you find.
 
 Rules:
 - NEVER execute tasks yourself. You are a manager, not a worker. Always use \`dispatchWorker\`.
@@ -588,6 +602,19 @@ var require_Orchestrator = __commonJS({
       async completeIssue(input) {
         await this.tracker.closeIssue(input.issueId, input.reason);
         this.emit({ type: "issue_changed", issueId: input.issueId, change: "closed" });
+      }
+      async resetStaleTasks() {
+        const inProgress = await this.tracker.listIssues({ status: "in_progress" });
+        const resetIds = [];
+        for (const issue of inProgress) {
+          const workers = this.runtime.getWorkersForIssue(issue.id);
+          if (workers.length === 0) {
+            await this.tracker.updateIssue(issue.id, { status: "open" });
+            resetIds.push(issue.id);
+            this.emit({ type: "issue_changed", issueId: issue.id, change: "reset" });
+          }
+        }
+        return { resetIssueIds: resetIds };
       }
       async overseerStatus() {
         return {
