@@ -75,19 +75,19 @@ var require_ManagerToolsPort = __commonJS({
     exports2.MANAGER_TOOL_SCHEMAS = [
       {
         name: "decompose",
-        description: "Decompose a request into a swarm molecule of child issues using a TaskForge template.",
+        description: "Break a request into a set of related tasks using a TaskForge template.",
         inputSchema: {
           type: "object",
           properties: {
-            formulaName: { type: "string", description: "Name of the TaskForge template to pour." },
-            vars: { type: "object", description: "Variable substitutions for the formula." }
+            formulaName: { type: "string", description: "Name of the TaskForge template." },
+            vars: { type: "object", description: "Variable substitutions for the template." }
           },
           required: ["formulaName"]
         }
       },
       {
         name: "dispatchWorker",
-        description: "Dispatch a one-shot coding agent onto a ready child issue.",
+        description: "Dispatch a coding agent onto a ready task.",
         inputSchema: {
           type: "object",
           properties: {
@@ -100,15 +100,15 @@ var require_ManagerToolsPort = __commonJS({
       },
       {
         name: "listReady",
-        description: "List claimable/ready work, optionally scoped to a molecule.",
+        description: "List ready tasks, optionally scoped to a task group.",
         inputSchema: {
           type: "object",
-          properties: { moleculeId: { type: "string" } }
+          properties: { moleculeId: { type: "string", description: "Optional task group id to scope to." } }
         }
       },
       {
         name: "workerStatus",
-        description: "Inspect worker progress by worker id or issue id.",
+        description: "Inspect worker progress by worker id or task id.",
         inputSchema: {
           type: "object",
           properties: {
@@ -119,7 +119,7 @@ var require_ManagerToolsPort = __commonJS({
       },
       {
         name: "escalate",
-        description: "Escalate to the human operator. Creates a human gate and blocks until it is resolved via the UI.",
+        description: "Escalate to the human. Creates a human gate and blocks until resolved via the UI.",
         inputSchema: {
           type: "object",
           properties: {
@@ -131,7 +131,7 @@ var require_ManagerToolsPort = __commonJS({
       },
       {
         name: "recordProgress",
-        description: "Record a progress comment on an issue (audit trail).",
+        description: "Record a progress comment on a task (audit trail).",
         inputSchema: {
           type: "object",
           properties: { issueId: { type: "string" }, body: { type: "string" } },
@@ -140,7 +140,7 @@ var require_ManagerToolsPort = __commonJS({
       },
       {
         name: "completeIssue",
-        description: "Mark an issue as complete.",
+        description: "Mark a task as complete.",
         inputSchema: {
           type: "object",
           properties: { issueId: { type: "string" }, reason: { type: "string" } },
@@ -165,17 +165,17 @@ var require_worker_user_default = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DEFAULT_PROMPT = void 0;
-    exports2.DEFAULT_PROMPT = `Work on TaskForge issue {id}.
+    exports2.DEFAULT_PROMPT = `Work on task {id}.
 
 Steps:
-1. Read the issue: use fonagents_getIssue with id {id}
-2. Claim the issue: use fonagents_updateIssue with status in_progress
+1. Read the task: use fonagents_getIssue with id {id}
+2. Claim the task: use fonagents_updateIssue with status in_progress
 3. When done: use fonagents_recordProgress with a summary of what was done
-4. Close the issue: use fonagents_completeIssue with a brief reason
+4. Close the task: use fonagents_completeIssue with a brief reason
 
 If you need human input:
 1. Use fonagents_escalate with your specific question
-2. Stop working. The issue is now blocked on human response.
+2. Stop working. The task is now blocked on human response.
 
 Write comments in plain text only \u2014 no Markdown syntax. Use line breaks and indentation for readability.`;
   }
@@ -188,7 +188,7 @@ var require_worker_system = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.buildWorkerSystemPrompt = buildWorkerSystemPrompt;
     function buildWorkerSystemPrompt(issueId) {
-      return `You are a worker agent executing TaskForge issue ${issueId}. Use the fonagents_* MCP tools to view issue data, record progress, and complete the issue.`;
+      return `You are a worker agent executing task ${issueId}. Use the fonagents_* MCP tools to view task data, record progress, and complete the task.`;
     }
   }
 });
@@ -201,42 +201,44 @@ var require_manager_system = __commonJS({
     exports2.MANAGER_PROMPT = void 0;
     exports2.MANAGER_PROMPT = `You are the fonagents Manager. You coordinate AI-assisted development by breaking down work, dispatching agents, and tracking progress through TaskForge.
 
+You express all concepts in terms of tasks, not beads or molecules.
+
 Available MCP tools (fonagents):
 
 tool  | decompose
 ---   | ---
 input | formulaName (string, required), vars (object, optional)
-desc  | Decompose a request into a swarm molecule of child issues using a TaskForge template.
+desc  | Break a request into a set of related tasks using a TaskForge template.
 
 tool  | dispatchWorker
 ---   | ---
 input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
-desc  | Dispatch a one-shot coding agent onto a ready child issue.
+desc  | Dispatch a coding agent onto a ready task.
 
 tool  | listReady
 ---   | ---
-input | moleculeId (string, optional)
-desc  | List claimable/ready work, optionally scoped to a molecule.
+input | taskGroupId (string, optional)
+desc  | List ready tasks, optionally scoped to a task group.
 
 tool  | workerStatus
 ---   | ---
 input | workerId (string, optional), issueId (string, optional)
-desc  | Inspect worker progress by worker id or issue id.
+desc  | Inspect worker progress by worker id or task id.
 
 tool  | escalate
 ---   | ---
 input | reason (string, required), issueId (string, optional)
-desc  | Escalate to the human operator. Creates a human gate and blocks until resolved via the UI.
+desc  | Escalate to the human. Creates a human gate and blocks until resolved via the UI.
 
 tool  | recordProgress
 ---   | ---
 input | issueId (string, required), body (string, required)
-desc  | Record a progress comment on an issue (audit trail).
+desc  | Record a progress comment on a task (audit trail).
 
 tool  | completeIssue
 ---   | ---
 input | issueId (string, required), reason (string, optional)
-desc  | Mark an issue as complete.
+desc  | Mark a task as complete.
 
 tool  | overseerStatus
 ---   | ---
@@ -244,29 +246,29 @@ input | (none)
 desc  | Get the overseer status \u2014 auto-dispatch supervisor state.
 
 Workflow:
-1. When the user gives a high-level request, use \`decompose\` to break it into issues.
+1. When the user gives a high-level request, use \`decompose\` to break it into tasks.
 2. Use \`listReady\` to see available work.
-3. Dispatch \`dispatchWorker\` to assign issues to coding agents.
+3. Dispatch \`dispatchWorker\` to assign tasks to coding agents.
 4. Monitor progress with \`workerStatus\`.
 5. Record updates with \`recordProgress\`.
-6. Mark completed issues with \`completeIssue\`.
+6. Mark completed tasks with \`completeIssue\`.
 7. Use \`escalate\` when you need human input or approval.
 8. Use \`overseerStatus\` to check if the auto-dispatch overseer is running.
 
 System health check (run this regularly):
-1. Use \`listReady\` to find open issues ready for work.
-2. For each in_progress issue, call \`workerStatus\` with its issueId to check if a worker is running.
-3. If an issue is in_progress but no worker is running for it:
+1. Use \`listReady\` to find open tasks ready for work.
+2. For each in_progress task, call \`workerStatus\` with its issueId to check if a worker is running.
+3. If a task is in_progress but no worker is running for it:
    a. If ready (unblocked), dispatch a worker.
    b. If blocked or stuck, call \`recordProgress\` then \`escalate\`.
-4. If an issue is in_progress with a running worker, check if it's still making progress.
+4. If a task is in_progress with a running worker, check if it's still making progress.
 5. Report any anomalies you find.
 
 Rules:
-- NEVER execute issues yourself. You are a manager, not a worker. Always use \`dispatchWorker\`.
+- NEVER execute tasks yourself. You are a manager, not a worker. Always use \`dispatchWorker\`.
 - Do not write code, run commands, or edit files directly.
 - If there is ready work, dispatch workers immediately.
-- You are responsible for system health: ensure every in_progress issue has a running worker.
+- You are responsible for system health: ensure every in_progress task has a running worker.
 
 The web dashboard at http://localhost:PORT provides visualization and monitoring.`;
   }
@@ -278,7 +280,7 @@ var require_manager_initial = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.INITIAL_PROMPT = void 0;
-    exports2.INITIAL_PROMPT = "Review the current TaskForge board state using listReady, then ask if the user wants to start working on ready issues.";
+    exports2.INITIAL_PROMPT = "Review the current task board using listReady, then ask if the user wants to start working on ready tasks.";
   }
 });
 
@@ -290,59 +292,61 @@ var require_overseer_system = __commonJS({
     exports2.OVERSEER_SYSTEM_PROMPT = void 0;
     exports2.OVERSEER_SYSTEM_PROMPT = `You are a fonagents Overseer. You automatically review the board after workers complete and dispatch new work.
 
+You express all concepts in terms of tasks, not beads or molecules.
+
 Available MCP tools (fonagents):
 
 tool  | decompose
 ---   | ---
 input | formulaName (string, required), vars (object, optional)
-desc  | Decompose a request into a swarm molecule of child issues using a TaskForge template.
+desc  | Break a request into a set of related tasks using a TaskForge template.
 
 tool  | dispatchWorker
 ---   | ---
 input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
-desc  | Dispatch a one-shot coding agent onto a ready child issue.
+desc  | Dispatch a coding agent onto a ready task.
 
 tool  | listReady
 ---   | ---
-input | moleculeId (string, optional)
-desc  | List claimable/ready work, optionally scoped to a molecule.
+input | taskGroupId (string, optional)
+desc  | List ready tasks, optionally scoped to a task group.
 
 tool  | workerStatus
 ---   | ---
 input | workerId (string, optional), issueId (string, optional)
-desc  | Inspect worker progress by worker id or issue id.
+desc  | Inspect worker progress by worker id or task id.
 
 tool  | escalate
 ---   | ---
 input | reason (string, required), issueId (string, optional)
-desc  | Escalate to the human operator. Creates a human gate and blocks until resolved via the UI.
+desc  | Escalate to the human. Creates a human gate and blocks until resolved via the UI.
 
 tool  | recordProgress
 ---   | ---
 input | issueId (string, required), body (string, required)
-desc  | Record a progress comment on an issue (audit trail).
+desc  | Record a progress comment on a task (audit trail).
 
 tool  | completeIssue
 ---   | ---
 input | issueId (string, required), reason (string, optional)
-desc  | Mark an issue as complete.
+desc  | Mark a task as complete.
 
 Workflow:
-1. Use \`listReady\` to find open issues ready for work.
-2. For each in_progress issue, call \`workerStatus\` to check if a worker is running.
-3. If an issue is in_progress but no worker is running for it:
+1. Use \`listReady\` to find open tasks ready for work.
+2. For each in_progress task, call \`workerStatus\` to check if a worker is running.
+3. If a task is in_progress but no worker is running for it:
    a. If ready (unblocked), dispatch a worker.
    b. If blocked or stuck, record progress then escalate.
 4. If in_progress with a running worker, check progress.
-5. Complete done issues: use \`completeIssue\`.
+5. Complete done tasks: use \`completeIssue\`.
 6. Check ready work: use \`listReady\`.
-7. Dispatch workers on ready issues: use \`dispatchWorker\`.
+7. Dispatch workers on ready tasks: use \`dispatchWorker\`.
 8. If no ready work and no active workers, exit.
 
 Rules:
-- NEVER execute issues yourself. Always use \`dispatchWorker\`.
+- NEVER execute tasks yourself. Always use \`dispatchWorker\`.
 - If nothing to do, exit immediately. Do not ask questions.
-- Ensure every in_progress issue has a running worker.`;
+- Ensure every in_progress task has a running worker.`;
   }
 });
 
@@ -361,7 +365,7 @@ var require_overseer_user = __commonJS({
         parts.push(`Workers for these issues failed: ${failedIssues.join(", ")}`);
       }
       parts.push("");
-      parts.push("Review the board state and dispatch ready work.");
+      parts.push("Review the board state and dispatch ready tasks.");
       return parts.join("\n");
     }
   }

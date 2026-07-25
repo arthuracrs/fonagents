@@ -4,19 +4,19 @@ exports.MANAGER_TOOL_SCHEMAS = void 0;
 exports.MANAGER_TOOL_SCHEMAS = [
     {
         name: 'decompose',
-        description: 'Decompose a request into a swarm molecule of child issues using a TaskForge template.',
+        description: 'Break a request into a set of related tasks using a TaskForge template.',
         inputSchema: {
             type: 'object',
             properties: {
-                formulaName: { type: 'string', description: 'Name of the TaskForge template to pour.' },
-                vars: { type: 'object', description: 'Variable substitutions for the formula.' },
+                formulaName: { type: 'string', description: 'Name of the TaskForge template.' },
+                vars: { type: 'object', description: 'Variable substitutions for the template.' },
             },
             required: ['formulaName'],
         },
     },
     {
         name: 'dispatchWorker',
-        description: 'Dispatch a one-shot coding agent onto a ready child issue.',
+        description: 'Dispatch a coding agent onto a ready task.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -29,15 +29,15 @@ exports.MANAGER_TOOL_SCHEMAS = [
     },
     {
         name: 'listReady',
-        description: 'List claimable/ready work, optionally scoped to a molecule.',
+        description: 'List ready tasks, optionally scoped to a task group.',
         inputSchema: {
             type: 'object',
-            properties: { moleculeId: { type: 'string' } },
+            properties: { moleculeId: { type: 'string', description: 'Optional task group id to scope to.' } },
         },
     },
     {
         name: 'workerStatus',
-        description: 'Inspect worker progress by worker id or issue id.',
+        description: 'Inspect worker progress by worker id or task id.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -48,7 +48,7 @@ exports.MANAGER_TOOL_SCHEMAS = [
     },
     {
         name: 'escalate',
-        description: 'Escalate to the human operator. Creates a human gate and blocks until it is resolved via the UI.',
+        description: 'Escalate to the human. Creates a human gate and blocks until resolved via the UI.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -60,7 +60,7 @@ exports.MANAGER_TOOL_SCHEMAS = [
     },
     {
         name: 'recordProgress',
-        description: 'Record a progress comment on an issue (audit trail).',
+        description: 'Record a progress comment on a task (audit trail).',
         inputSchema: {
             type: 'object',
             properties: { issueId: { type: 'string' }, body: { type: 'string' } },
@@ -69,7 +69,7 @@ exports.MANAGER_TOOL_SCHEMAS = [
     },
     {
         name: 'completeIssue',
-        description: 'Mark an issue as complete.',
+        description: 'Mark a task as complete.',
         inputSchema: {
             type: 'object',
             properties: { issueId: { type: 'string' }, reason: { type: 'string' } },
