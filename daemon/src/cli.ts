@@ -157,7 +157,9 @@ async function runWorkers(): Promise<void> {
   }
 
   console.log()
-  const table: string[][] = []
+  const table: string[][] = [
+    ['#', 'Worker ID', 'Issue ID', 'Runtime', 'Status', 'Session'],
+  ]
   for (let i = 0; i < active.length; i++) {
     const w = active[i]
     const session = w.tmuxSession ? ` tmux: ${w.tmuxSession}` : ''
