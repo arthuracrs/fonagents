@@ -1,4 +1,5 @@
-import type { IssueId, MoleculeId, RuntimeId, WorkerId } from '../domain/types.js';
+import type { Issue, IssueId, MoleculeId, RuntimeId, WorkerId } from '../domain/types.js';
+import type { IssueFilter } from './IssueTrackerPort.js';
 export interface ManagerToolsPort {
     decompose(input: {
         formulaName: string;
@@ -14,6 +15,7 @@ export interface ManagerToolsPort {
     }): Promise<{
         workerId: WorkerId;
     }>;
+    listIssues(input?: IssueFilter): Promise<Issue[]>;
     listReady(input: {
         moleculeId?: MoleculeId;
     }): Promise<{

@@ -286,6 +286,8 @@ async function executeManagerTool(
       return tools.decompose(args as { formulaName: string; vars: Record<string, string> })
     case 'dispatchWorker':
       return tools.dispatchWorker(args as { issueId: string; runtimeId?: string; prompt?: string })
+    case 'listIssues':
+      return tools.listIssues(args as Record<string, unknown>)
     case 'listReady':
       return tools.listReady(args as { moleculeId?: string })
     case 'workerStatus':

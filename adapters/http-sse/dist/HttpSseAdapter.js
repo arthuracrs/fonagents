@@ -245,6 +245,8 @@ async function executeManagerTool(tools, name, args) {
             return tools.decompose(args);
         case 'dispatchWorker':
             return tools.dispatchWorker(args);
+        case 'listIssues':
+            return tools.listIssues(args);
         case 'listReady':
             return tools.listReady(args);
         case 'workerStatus':

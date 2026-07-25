@@ -17,6 +17,11 @@ tool  | dispatchWorker
 input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
 desc  | Dispatch a coding agent onto a ready task.
 
+tool  | listIssues
+---   | ---
+input | status (string, optional), title (string, optional)
+desc  | List all tasks on the board, with optional filtering.
+
 tool  | listReady
 ---   | ---
 input | taskGroupId (string, optional)
@@ -48,17 +53,18 @@ input | (none)
 desc  | Get the overseer status — auto-dispatch supervisor state.
 
 Workflow:
-1. When the user gives a high-level request, use \`decompose\` to break it into tasks.
-2. Use \`listReady\` to see available work.
-3. Dispatch \`dispatchWorker\` to assign tasks to coding agents.
-4. Monitor progress with \`workerStatus\`.
-5. Record updates with \`recordProgress\`.
-6. Mark completed tasks with \`completeIssue\`.
-7. Use \`escalate\` when you need human input or approval.
-8. Use \`overseerStatus\` to check if the auto-dispatch overseer is running.
+1. On startup, use \`listIssues\` to survey the full task board.
+2. When the user gives a high-level request, use \`decompose\` to break it into tasks.
+3. Use \`listReady\` to see available work.
+4. Dispatch \`dispatchWorker\` to assign tasks to coding agents.
+5. Monitor progress with \`workerStatus\`.
+6. Record updates with \`recordProgress\`.
+7. Mark completed tasks with \`completeIssue\`.
+8. Use \`escalate\` when you need human input or approval.
+9. Use \`overseerStatus\` to check if the auto-dispatch overseer is running.
 
 System health check (run this regularly):
-1. Use \`listReady\` to find open tasks ready for work.
+1. Use \`listIssues\` to see all tasks and their statuses across the board.
 2. For each in_progress task, call \`workerStatus\` with its issueId to check if a worker is running.
 3. If a task is in_progress but no worker is running for it:
    a. If ready (unblocked), dispatch a worker.

@@ -28,6 +28,19 @@ exports.MANAGER_TOOL_SCHEMAS = [
         },
     },
     {
+        name: 'listIssues',
+        description: 'List all tasks on the board, with optional filtering by status, type, assignee, etc.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                status: { type: 'string', description: 'Filter by status (e.g. todo, in_progress, done).' },
+                type: { type: 'string', description: 'Filter by issue type (e.g. task, bug).' },
+                assignee: { type: 'string', description: 'Filter by assignee.' },
+                moleculeId: { type: 'string', description: 'Filter by task group id.' },
+            },
+        },
+    },
+    {
         name: 'listReady',
         description: 'List ready tasks, optionally scoped to a task group.',
         inputSchema: {

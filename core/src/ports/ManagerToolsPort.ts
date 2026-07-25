@@ -1,4 +1,5 @@
-import type { IssueId, MoleculeId, RuntimeId, WorkerId } from '../domain/types.js'
+import type { Issue, IssueId, MoleculeId, RuntimeId, WorkerId } from '../domain/types.js'
+import type { IssueFilter } from './IssueTrackerPort.js'
 
 // Tools core exposes to the manager LLM via MCP.
 //
@@ -24,6 +25,9 @@ export interface ManagerToolsPort {
     runtimeId?: RuntimeId
     prompt?: string
   }): Promise<{ workerId: WorkerId }>
+
+  // List all tasks on the board, with optional filtering.
+  listIssues(input?: IssueFilter): Promise<Issue[]>
 
   // List ready tasks, optionally scoped to a task group.
   listReady(input: { moleculeId?: MoleculeId }): Promise<{ issueId: IssueId; title: string; status: string }[]>
@@ -87,6 +91,19 @@ export const MANAGER_TOOL_SCHEMAS: ToolSchema[] = [
         prompt: { type: 'string', description: 'Optional override prompt; defaults to issue context.' },
       },
       required: ['issueId'],
+    },
+  },
+  {
+    name: 'listIssues',
+    description: 'List all tasks on the board, with optional filtering by status, type, assignee, etc.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', description: 'Filter by status (e.g. todo, in_progress, done).' },
+        type: { type: 'string', description: 'Filter by issue type (e.g. task, bug).' },
+        assignee: { type: 'string', description: 'Filter by assignee.' },
+        moleculeId: { type: 'string', description: 'Filter by task group id.' },
+      },
     },
   },
   {
