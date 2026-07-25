@@ -48,7 +48,7 @@ function writeAgentFile(projectDir: string, prompt: string): void {
   const content = `---
 description: fonagents Manager — coordinates AI development through TaskForge
 mode: primary
-model: opencode-go/mimo-v2.5-pro
+model: opencode-go/deepseek-v4-flash
 permission:
   task: allow
   webfetch: allow
@@ -56,7 +56,6 @@ permission:
   skill: allow
   fonagents_*: allow
 ---
-
 ${prompt}`
   fs.writeFileSync(path.join(agentsDir, 'fonagents-manager.md'), content, 'utf8')
 }
@@ -67,7 +66,7 @@ function writeOverseerAgentFile(projectDir: string, prompt: string): void {
   const content = `---
 description: fonagents Overseer — automatically reviews board and dispatches work after workers complete
 mode: primary
-model: opencode-go/mimo-v2.5-pro
+model: opencode-go/deepseek-v4-flash
 permission:
   task: allow
   webfetch: allow
@@ -75,7 +74,6 @@ permission:
   skill: allow
   fonagents_*: allow
 ---
-
 ${prompt}`
   fs.writeFileSync(path.join(agentsDir, 'fonagents-overseer.md'), content, 'utf8')
 }
