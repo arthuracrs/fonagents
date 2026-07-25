@@ -210,7 +210,7 @@ export class AnagentAdapter implements AgentRuntimePort {
         'new-session', '-d', '-s', sessionName,
         '-x', '220', '-y', '50',
         '-c', input.cwd ?? this.cwd,
-        'opencode', '--agent', 'fonagents-worker', '--prompt', combined,
+        'opencode', '--auto', '--agent', 'fonagents-worker', '--prompt', combined,
       ])
 
       handle.tmuxSession = sessionName

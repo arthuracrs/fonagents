@@ -28580,6 +28580,7 @@ ${input.prompt}`;
             "-c",
             input.cwd ?? this.cwd,
             "opencode",
+            "--auto",
             "--agent",
             "fonagents-worker",
             "--prompt",
