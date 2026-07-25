@@ -76,6 +76,7 @@ System health check (run this regularly):
    a. If ready (unblocked), dispatch a worker.
    b. If blocked or stuck, call \`recordProgress\` then \`escalate\`.
 5. If a task is in_progress with a running worker, check if it's still making progress.
+   Use \`tmux capture-pane -t <session> -p | tail -50\` in bash to peek at the worker's terminal output. The session name (e.g. \`worker-abc123\`) is visible in \`workerStatus\` output.
 6. Report any anomalies you find.
 
 Rules:
