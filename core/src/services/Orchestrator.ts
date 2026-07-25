@@ -154,7 +154,7 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
     if (input.issueId) {
       return this.runtime.getWorkersForIssue(input.issueId).map((w) => ({ id: w.id, status: w.status, issueId: w.issueId }))
     }
-    return []
+    return this.runtime.listWorkers().map((w) => ({ id: w.id, status: w.status, issueId: w.issueId }))
   }
 
   async escalate(input: { reason: string; issueId?: IssueId }): Promise<{ gateId: string }> {

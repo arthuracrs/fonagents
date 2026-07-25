@@ -121,7 +121,7 @@ var require_ManagerToolsPort = __commonJS({
       },
       {
         name: "workerStatus",
-        description: "Inspect worker progress by worker id or task id.",
+        description: "Inspect worker progress by worker id or task id. With no arguments, returns all workers.",
         inputSchema: {
           type: "object",
           properties: {
@@ -581,7 +581,7 @@ var require_Orchestrator = __commonJS({
         if (input.issueId) {
           return this.runtime.getWorkersForIssue(input.issueId).map((w) => ({ id: w.id, status: w.status, issueId: w.issueId }));
         }
-        return [];
+        return this.runtime.listWorkers().map((w) => ({ id: w.id, status: w.status, issueId: w.issueId }));
       }
       async escalate(input) {
         const issueId = input.issueId ?? await this.currentMoleculeRoot();

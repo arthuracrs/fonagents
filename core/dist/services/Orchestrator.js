@@ -107,7 +107,7 @@ class Orchestrator {
         if (input.issueId) {
             return this.runtime.getWorkersForIssue(input.issueId).map((w) => ({ id: w.id, status: w.status, issueId: w.issueId }));
         }
-        return [];
+        return this.runtime.listWorkers().map((w) => ({ id: w.id, status: w.status, issueId: w.issueId }));
     }
     async escalate(input) {
         const issueId = input.issueId ?? await this.currentMoleculeRoot();

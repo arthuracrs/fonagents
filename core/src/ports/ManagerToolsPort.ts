@@ -120,7 +120,7 @@ export const MANAGER_TOOL_SCHEMAS: ToolSchema[] = [
   },
   {
     name: 'workerStatus',
-    description: 'Inspect worker progress by worker id or task id.',
+    description: 'Inspect worker progress by worker id or task id. With no arguments, returns all workers.',
     inputSchema: {
       type: 'object',
       properties: {
