@@ -107,8 +107,9 @@ export default function App() {
         loadIssuesRef.current({ silent: true });
       }
     });
-    const poll = setInterval(() => loadIssuesRef.current({ silent: true }), 5000);
-    return () => { unsub(); clearInterval(poll); };
+    const onVisible = () => { if (document.visibilityState === "visible") loadIssuesRef.current({ silent: true }); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { unsub(); document.removeEventListener("visibilitychange", onVisible); };
   }, [initialized]);
 
   useEffect(() => {
