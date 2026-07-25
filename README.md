@@ -58,15 +58,36 @@ That's it. It finds a free port, starts the server with the embedded TaskForge d
 
 ## Configuration
 
-| Env var | What it does |
-|---|---|
-| `PORT` | HTTP port (default: auto-find free port starting at 3001) |
-| `PROJECT_DIR` | Path to the project (default: cwd) |
-| `ANAGENT_PATH` | Path to `anagent` binary (default: auto-detect) |
-| `MANAGER_RUNTIME` | Agent runtime for the manager (default: `opencode`) |
-| `MANAGER_SYSTEM_PROMPT` | Override the manager's system prompt |
-| `FONAGENTS_SUPERVISION_ENABLED` | Set to `false` to disable automatic worker dispatch |
-| `FONAGENTS_SUPERVISION_MODE` | `queue` (default) or `batch` |
+### Environment variables
+
+| Env var | Default | What it does |
+|---|---|---|
+| `PORT` | `3001` | HTTP port for the daemon server |
+| `PROJECT_DIR` | `cwd` | Path to the project |
+| `MANAGER_RUNTIME` | `opencode` | Agent runtime for the manager (`opencode`, `claude-code`, `cursor`) |
+| `ANAGENT_PATH` | auto-detect | Path to the `anagent` binary |
+| `FONAGENTS_MAX_WORKERS` | `5` | Maximum concurrent worker agents |
+| `FONAGENTS_WORKER_MODE` | `tui` | Worker mode: `tui` (visible, stays open) or `run` (exits when done) |
+| `FONAGENTS_SUPERVISION_ENABLED` | `true` | Set to `false` to disable automatic worker dispatch |
+| `FONAGENTS_SUPERVISION_MODE` | `queue` | Overseer dispatch mode: `queue` or `batch` |
+| `FONAGENTS_SUPERVISION_DEBOUNCE_MS` | `5000` | Debounce window (ms) in batch mode |
+| `FONAGENTS_SUPERVISION_MAX_CONCURRENT` | `5` | Max concurrent overseer sessions |
+| `FONAGENTS_SUPERVISION_TIMEOUT_SEC` | `600` | Overseer session timeout (seconds) |
+
+### CLI
+
+```bash
+fonagents                    # Start daemon + manager agent
+fonagents --web-only         # Start only the web UI, no manager
+fonagents --runtime <id>     # Agent runtime (opencode, claude-code, cursor)
+fonagents --port <n>         # HTTP port
+
+fonagents workers            # List active workers and pick one to tail
+fonagents tail <worker-id>   # Attach to a worker's tmux session
+
+fonagents migrate            # Import beads issues into TaskForge
+fonagents help               # Show help
+```
 
 ## Architecture
 

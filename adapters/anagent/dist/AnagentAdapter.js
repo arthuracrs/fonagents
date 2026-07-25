@@ -176,12 +176,16 @@ class AnagentAdapter {
     async spawnOpencodeWorker(input, id, handle) {
         const combined = `${input.systemPrompt}\n\n${input.prompt}`;
         const sessionName = `worker-${id}`;
+        const workerMode = process.env.FONAGENTS_WORKER_MODE ?? 'tui';
         try {
+            const opencodeArgs = workerMode === 'run'
+                ? ['run', '--auto', '--agent', 'fonagents-worker', combined]
+                : ['--auto', '--agent', 'fonagents-worker', '--prompt', combined];
             await execFileAsync('tmux', [
                 'new-session', '-d', '-s', sessionName,
                 '-x', '220', '-y', '50',
                 '-c', input.cwd ?? this.cwd,
-                'opencode', '--auto', '--agent', 'fonagents-worker', '--prompt', combined,
+                'opencode', ...opencodeArgs,
             ]);
             handle.tmuxSession = sessionName;
             await execFileAsync('tmux', [
@@ -218,6 +222,7 @@ class AnagentAdapter {
                     handle.finishedAt = new Date().toISOString();
                     handle.exitCode = 0;
                     delete handle.tmuxSession;
+                    await execFileAsync('tmux', ['kill-session', '-t', sessionName]).catch(() => { });
                     this.notify(id, { type: 'done', exitCode: 0, durationMs: 0 });
                     return;
                 }
@@ -227,6 +232,7 @@ class AnagentAdapter {
                 handle.finishedAt = new Date().toISOString();
                 handle.exitCode = 0;
                 delete handle.tmuxSession;
+                await execFileAsync('tmux', ['kill-session', '-t', sessionName]).catch(() => { });
                 this.notify(id, { type: 'done', exitCode: 0, durationMs: 0 });
                 return;
             }
