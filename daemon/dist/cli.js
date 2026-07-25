@@ -603,6 +603,12 @@ var require_Orchestrator = __commonJS({
       async completeIssue(input) {
         await this.tracker.closeIssue(input.issueId, input.reason);
         this.emit({ type: "issue_changed", issueId: input.issueId, change: "closed" });
+        const workers = this.runtime.listWorkers();
+        for (const w of workers) {
+          if (w.issueId === input.issueId && w.status === "running") {
+            await this.runtime.cancelWorker(w.id);
+          }
+        }
       }
       async resetStaleTasks() {
         const inProgress = await this.tracker.listIssues({ status: "in_progress" });
@@ -28493,12 +28499,19 @@ var require_AnagentAdapter = __commonJS({
             const synthetic = code === 0 ? { type: "done", exitCode: 0, durationMs: 0 } : { type: "failed", error: `Worker exited with code ${code ?? -1}`, exitCode: code ?? -1, durationMs: 0 };
             this.notify(id, synthetic);
           }
+          if (handle.tmuxSession) {
+            killTmuxSession(handle.tmuxSession).catch(() => {
+            });
+            delete handle.tmuxSession;
+          }
+          this.workers.delete(id);
           tracker.unsubscribe();
         });
         proc.on("error", (err) => {
           handle.status = "failed";
           handle.finishedAt = (/* @__PURE__ */ new Date()).toISOString();
           this.notify(id, { type: "failed", error: err.message, exitCode: -1, durationMs: 0 });
+          this.workers.delete(id);
         });
         return handle;
       }
@@ -28518,6 +28531,7 @@ var require_AnagentAdapter = __commonJS({
           killTmuxSession(worker.tmuxSession).catch(() => {
           });
         }
+        this.workers.delete(workerId);
         return Promise.resolve(true);
       }
       subscribeWorker(workerId, cb) {
@@ -28600,12 +28614,14 @@ ${input.prompt}`;
             handle.exitCode = -1;
             delete handle.tmuxSession;
             this.notify(id, { type: "failed", error: `Worker polling error: ${err.message}`, exitCode: -1, durationMs: 0 });
+            this.workers.delete(id);
           });
         } catch (err) {
           handle.status = "failed";
           handle.finishedAt = (/* @__PURE__ */ new Date()).toISOString();
           handle.exitCode = -1;
           this.notify(id, { type: "failed", error: `Failed to spawn worker: ${err.message}`, exitCode: -1, durationMs: 0 });
+          this.workers.delete(id);
         }
         return handle;
       }
@@ -28630,6 +28646,7 @@ ${input.prompt}`;
               await execFileAsync2("tmux", ["kill-session", "-t", sessionName]).catch(() => {
               });
               this.notify(id, { type: "done", exitCode: 0, durationMs: 0 });
+              this.workers.delete(id);
               return;
             }
           } catch {
@@ -28640,6 +28657,7 @@ ${input.prompt}`;
             await execFileAsync2("tmux", ["kill-session", "-t", sessionName]).catch(() => {
             });
             this.notify(id, { type: "done", exitCode: 0, durationMs: 0 });
+            this.workers.delete(id);
             return;
           }
         }
@@ -28650,6 +28668,7 @@ ${input.prompt}`;
         });
         delete handle.tmuxSession;
         this.notify(id, { type: "failed", error: "Worker timed out after 1 hour", exitCode: -1, durationMs: 3600 * 1e3 });
+        this.workers.delete(id);
       }
       notify(workerId, event) {
         const subs = this.listeners.get(workerId);

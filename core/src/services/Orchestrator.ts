@@ -177,6 +177,12 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
   async completeIssue(input: { issueId: IssueId; reason?: string }): Promise<void> {
     await this.tracker.closeIssue(input.issueId, input.reason)
     this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'closed' })
+    const workers = this.runtime.listWorkers()
+    for (const w of workers) {
+      if (w.issueId === input.issueId && w.status === 'running') {
+        await this.runtime.cancelWorker(w.id)
+      }
+    }
   }
 
   async resetStaleTasks(): Promise<{ resetIssueIds: IssueId[] }> {

@@ -128,6 +128,12 @@ class Orchestrator {
     async completeIssue(input) {
         await this.tracker.closeIssue(input.issueId, input.reason);
         this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'closed' });
+        const workers = this.runtime.listWorkers();
+        for (const w of workers) {
+            if (w.issueId === input.issueId && w.status === 'running') {
+                await this.runtime.cancelWorker(w.id);
+            }
+        }
     }
     async resetStaleTasks() {
         const inProgress = await this.tracker.listIssues({ status: 'in_progress' });

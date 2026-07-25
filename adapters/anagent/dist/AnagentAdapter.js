@@ -102,12 +102,18 @@ class AnagentAdapter {
                     : { type: 'failed', error: `Worker exited with code ${code ?? -1}`, exitCode: code ?? -1, durationMs: 0 };
                 this.notify(id, synthetic);
             }
+            if (handle.tmuxSession) {
+                killTmuxSession(handle.tmuxSession).catch(() => { });
+                delete handle.tmuxSession;
+            }
+            this.workers.delete(id);
             tracker.unsubscribe();
         });
         proc.on('error', (err) => {
             handle.status = 'failed';
             handle.finishedAt = new Date().toISOString();
             this.notify(id, { type: 'failed', error: err.message, exitCode: -1, durationMs: 0 });
+            this.workers.delete(id);
         });
         return handle;
     }
@@ -126,6 +132,7 @@ class AnagentAdapter {
         if (worker.tmuxSession) {
             killTmuxSession(worker.tmuxSession).catch(() => { });
         }
+        this.workers.delete(workerId);
         return Promise.resolve(true);
     }
     subscribeWorker(workerId, cb) {
@@ -197,6 +204,7 @@ class AnagentAdapter {
                 handle.exitCode = -1;
                 delete handle.tmuxSession;
                 this.notify(id, { type: 'failed', error: `Worker polling error: ${err.message}`, exitCode: -1, durationMs: 0 });
+                this.workers.delete(id);
             });
         }
         catch (err) {
@@ -204,6 +212,7 @@ class AnagentAdapter {
             handle.finishedAt = new Date().toISOString();
             handle.exitCode = -1;
             this.notify(id, { type: 'failed', error: `Failed to spawn worker: ${err.message}`, exitCode: -1, durationMs: 0 });
+            this.workers.delete(id);
         }
         return handle;
     }
@@ -224,6 +233,7 @@ class AnagentAdapter {
                     delete handle.tmuxSession;
                     await execFileAsync('tmux', ['kill-session', '-t', sessionName]).catch(() => { });
                     this.notify(id, { type: 'done', exitCode: 0, durationMs: 0 });
+                    this.workers.delete(id);
                     return;
                 }
             }
@@ -234,6 +244,7 @@ class AnagentAdapter {
                 delete handle.tmuxSession;
                 await execFileAsync('tmux', ['kill-session', '-t', sessionName]).catch(() => { });
                 this.notify(id, { type: 'done', exitCode: 0, durationMs: 0 });
+                this.workers.delete(id);
                 return;
             }
         }
@@ -243,6 +254,7 @@ class AnagentAdapter {
         await execFileAsync('tmux', ['kill-session', '-t', sessionName]).catch(() => { });
         delete handle.tmuxSession;
         this.notify(id, { type: 'failed', error: 'Worker timed out after 1 hour', exitCode: -1, durationMs: 3600 * 1000 });
+        this.workers.delete(id);
     }
     notify(workerId, event) {
         const subs = this.listeners.get(workerId);

@@ -122,6 +122,11 @@ export class AnagentAdapter implements AgentRuntimePort {
           : { type: 'failed', error: `Worker exited with code ${code ?? -1}`, exitCode: code ?? -1, durationMs: 0 }
         this.notify(id, synthetic)
       }
+      if (handle.tmuxSession) {
+        killTmuxSession(handle.tmuxSession).catch(() => {})
+        delete handle.tmuxSession
+      }
+      this.workers.delete(id)
       tracker.unsubscribe()
     })
 
@@ -129,6 +134,7 @@ export class AnagentAdapter implements AgentRuntimePort {
       handle.status = 'failed'
       handle.finishedAt = new Date().toISOString()
       this.notify(id, { type: 'failed', error: err.message, exitCode: -1, durationMs: 0 })
+      this.workers.delete(id)
     })
 
     return handle
@@ -148,6 +154,7 @@ export class AnagentAdapter implements AgentRuntimePort {
     if (worker.tmuxSession) {
       killTmuxSession(worker.tmuxSession).catch(() => {})
     }
+    this.workers.delete(workerId)
     return Promise.resolve(true)
   }
 
@@ -230,12 +237,14 @@ export class AnagentAdapter implements AgentRuntimePort {
         handle.exitCode = -1
         delete handle.tmuxSession
         this.notify(id, { type: 'failed', error: `Worker polling error: ${err.message}`, exitCode: -1, durationMs: 0 })
+        this.workers.delete(id)
       })
     } catch (err) {
       handle.status = 'failed'
       handle.finishedAt = new Date().toISOString()
       handle.exitCode = -1
       this.notify(id, { type: 'failed', error: `Failed to spawn worker: ${(err as Error).message}`, exitCode: -1, durationMs: 0 })
+      this.workers.delete(id)
     }
 
     return handle
@@ -265,6 +274,7 @@ export class AnagentAdapter implements AgentRuntimePort {
           delete handle.tmuxSession
           await execFileAsync('tmux', ['kill-session', '-t', sessionName]).catch(() => {})
           this.notify(id, { type: 'done', exitCode: 0, durationMs: 0 })
+          this.workers.delete(id)
           return
         }
       } catch {
@@ -274,6 +284,7 @@ export class AnagentAdapter implements AgentRuntimePort {
         delete handle.tmuxSession
         await execFileAsync('tmux', ['kill-session', '-t', sessionName]).catch(() => {})
         this.notify(id, { type: 'done', exitCode: 0, durationMs: 0 })
+        this.workers.delete(id)
         return
       }
     }
@@ -284,6 +295,7 @@ export class AnagentAdapter implements AgentRuntimePort {
     await execFileAsync('tmux', ['kill-session', '-t', sessionName]).catch(() => {})
     delete handle.tmuxSession
     this.notify(id, { type: 'failed', error: 'Worker timed out after 1 hour', exitCode: -1, durationMs: 3600 * 1000 })
+    this.workers.delete(id)
   }
 
   private notify(workerId: WorkerId, event: AgentStreamEvent): void {
