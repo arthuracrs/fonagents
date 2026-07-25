@@ -80,7 +80,7 @@ beads-ui/       # React frontend (served by the daemon)
 The core has zero knowledge of any adapter. To swap any
 adapter (e.g. taskforge → Linear, web → terminal), implement the corresponding port.
 
-## Some rules
+## Some rules to follow:
 
-after implement a feature deploy it.
-run this to update the tool: npm uninstall -g fonagents && npm install -g https://github.com/arthuracrs/fonagents/archive/main.tar.gz
+after you implement a feature, deploy it. Follow the deploy procedure.
+run this to update the tool on the user machine: npm uninstall -g fonagents && npm install -g https://github.com/arthuracrs/fonagents/archive/main.tar.gz
