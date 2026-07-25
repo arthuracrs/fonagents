@@ -27,6 +27,7 @@ export interface DaemonHandle {
 let _server: http.Server | null = null
 let _projectDir: string | null = null
 let _overseer: Overseer | null = null
+let _runtime: import('@fonagents/anagent-adapter').AnagentAdapter | null = null
 
 export function daemonStatePath(projectDir: string): string {
   return path.join(projectDir, '.fonagents', 'daemon.json')
@@ -163,6 +164,7 @@ You are a fonagents Worker. Execute the task assigned to you using the TaskForge
     anagentPath: opts.anagentPath ?? process.env.ANAGENT_PATH,
     cwd: projectDir,
   })
+  _runtime = runtime
 
   const overseerConfig: OverseerConfig = {
     enabled: process.env.FONAGENTS_SUPERVISION_ENABLED !== 'false',
@@ -243,6 +245,10 @@ You are a fonagents Worker. Execute the task assigned to you using the TaskForge
 }
 
 export function stopDaemon(): void {
+  if (_runtime) {
+    _runtime.killAllWorkers().catch(() => {})
+    _runtime = null
+  }
   if (_overseer) {
     _overseer.stop()
     _overseer = null

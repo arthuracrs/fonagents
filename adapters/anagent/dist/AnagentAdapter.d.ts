@@ -19,6 +19,7 @@ export declare class AnagentAdapter implements AgentRuntimePort {
     getWorker(workerId: WorkerId): WorkerHandle | undefined;
     getWorkersForIssue(issueId: IssueId): WorkerHandle[];
     listWorkers(): WorkerHandle[];
+    killAllWorkers(): Promise<void>;
     private pipeEvents;
     private spawnOpencodeWorker;
     private pollOpencodeWorker;

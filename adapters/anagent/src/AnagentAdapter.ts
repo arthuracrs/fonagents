@@ -179,6 +179,23 @@ export class AnagentAdapter implements AgentRuntimePort {
     return Array.from(this.workers.values()).map((w) => ({ ...w }))
   }
 
+  async killAllWorkers(): Promise<void> {
+    const ids = Array.from(this.workers.keys())
+    for (const id of ids) {
+      const worker = this.workers.get(id)
+      if (!worker) continue
+      if (worker.process) {
+        worker.process.kill('SIGTERM')
+        delete worker.process
+      }
+      if (worker.tmuxSession) {
+        await killTmuxSession(worker.tmuxSession)
+        delete worker.tmuxSession
+      }
+      this.workers.delete(id)
+    }
+  }
+
   // ── Internals ────────────────────────────────────────────────────────────────
 
   private pipeEvents(workerId: WorkerId, proc: ChildProcess): void {

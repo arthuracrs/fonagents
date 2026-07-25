@@ -153,6 +153,23 @@ class AnagentAdapter {
     listWorkers() {
         return Array.from(this.workers.values()).map((w) => ({ ...w }));
     }
+    async killAllWorkers() {
+        const ids = Array.from(this.workers.keys());
+        for (const id of ids) {
+            const worker = this.workers.get(id);
+            if (!worker)
+                continue;
+            if (worker.process) {
+                worker.process.kill('SIGTERM');
+                delete worker.process;
+            }
+            if (worker.tmuxSession) {
+                await killTmuxSession(worker.tmuxSession);
+                delete worker.tmuxSession;
+            }
+            this.workers.delete(id);
+        }
+    }
     // ── Internals ────────────────────────────────────────────────────────────────
     pipeEvents(workerId, proc) {
         let buf = '';

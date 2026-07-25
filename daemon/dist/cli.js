@@ -28550,6 +28550,23 @@ var require_AnagentAdapter = __commonJS({
       listWorkers() {
         return Array.from(this.workers.values()).map((w) => ({ ...w }));
       }
+      async killAllWorkers() {
+        const ids = Array.from(this.workers.keys());
+        for (const id of ids) {
+          const worker = this.workers.get(id);
+          if (!worker)
+            continue;
+          if (worker.process) {
+            worker.process.kill("SIGTERM");
+            delete worker.process;
+          }
+          if (worker.tmuxSession) {
+            await killTmuxSession(worker.tmuxSession);
+            delete worker.tmuxSession;
+          }
+          this.workers.delete(id);
+        }
+      }
       // ── Internals ────────────────────────────────────────────────────────────────
       pipeEvents(workerId, proc) {
         let buf = "";
@@ -53766,6 +53783,7 @@ var import_http = __toESM(require("http"));
 var _server = null;
 var _projectDir = null;
 var _overseer = null;
+var _runtime = null;
 function daemonStatePath(projectDir) {
   return import_path2.default.join(projectDir, ".fonagents", "daemon.json");
 }
@@ -53890,6 +53908,7 @@ You are a fonagents Worker. Execute the task assigned to you using the TaskForge
     anagentPath: opts.anagentPath ?? process.env.ANAGENT_PATH,
     cwd: projectDir
   });
+  _runtime = runtime;
   const overseerConfig = {
     enabled: process.env.FONAGENTS_SUPERVISION_ENABLED !== "false",
     mode: process.env.FONAGENTS_SUPERVISION_MODE || "queue",
@@ -53958,6 +53977,11 @@ You are a fonagents Worker. Execute the task assigned to you using the TaskForge
   });
 }
 function stopDaemon() {
+  if (_runtime) {
+    _runtime.killAllWorkers().catch(() => {
+    });
+    _runtime = null;
+  }
   if (_overseer) {
     _overseer.stop();
     _overseer = null;

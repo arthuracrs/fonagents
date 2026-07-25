@@ -19,6 +19,7 @@ const http_1 = __importDefault(require("http"));
 let _server = null;
 let _projectDir = null;
 let _overseer = null;
+let _runtime = null;
 function daemonStatePath(projectDir) {
     return path_1.default.join(projectDir, '.fonagents', 'daemon.json');
 }
@@ -143,6 +144,7 @@ You are a fonagents Worker. Execute the task assigned to you using the TaskForge
         anagentPath: opts.anagentPath ?? process.env.ANAGENT_PATH,
         cwd: projectDir,
     });
+    _runtime = runtime;
     const overseerConfig = {
         enabled: process.env.FONAGENTS_SUPERVISION_ENABLED !== 'false',
         mode: process.env.FONAGENTS_SUPERVISION_MODE || 'queue',
@@ -215,6 +217,10 @@ You are a fonagents Worker. Execute the task assigned to you using the TaskForge
     });
 }
 function stopDaemon() {
+    if (_runtime) {
+        _runtime.killAllWorkers().catch(() => { });
+        _runtime = null;
+    }
     if (_overseer) {
         _overseer.stop();
         _overseer = null;

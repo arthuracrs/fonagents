@@ -3,6 +3,7 @@ export interface AgentRuntimePort {
     listRuntimes(): Promise<RuntimeInfo[]>;
     spawnWorker(input: SpawnWorkerInput): Promise<WorkerHandle>;
     cancelWorker(workerId: WorkerId): Promise<boolean>;
+    killAllWorkers(): Promise<void>;
     subscribeWorker(workerId: WorkerId, cb: (event: AgentStreamEvent) => void): {
         unsubscribe(): void;
     };

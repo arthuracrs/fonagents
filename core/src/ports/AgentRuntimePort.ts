@@ -15,6 +15,7 @@ export interface AgentRuntimePort {
   // ── Workers (one-shot task execution) ─────────────────────────────────────────
   spawnWorker(input: SpawnWorkerInput): Promise<WorkerHandle>
   cancelWorker(workerId: WorkerId): Promise<boolean>
+  killAllWorkers(): Promise<void>
   subscribeWorker(workerId: WorkerId, cb: (event: AgentStreamEvent) => void): { unsubscribe(): void }
   getWorker(workerId: WorkerId): WorkerHandle | undefined
   getWorkersForIssue(issueId: IssueId): WorkerHandle[]
