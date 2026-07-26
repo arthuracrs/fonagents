@@ -169,7 +169,7 @@ export class ApiClient {
   readonly gates: GatesApi;
   private readonly http: HttpClient;
 
-  constructor(base: string) {
+  constructor(private readonly base: string) {
     this.http = new HttpClient(base);
     this.issues = new IssuesApi(this.http);
     this.deps = new DepsApi(this.http);
