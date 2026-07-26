@@ -3,6 +3,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MANAGER_TOOL_SCHEMAS = void 0;
 exports.MANAGER_TOOL_SCHEMAS = [
     {
+        name: 'createTask',
+        description: 'Create a new task on the board.',
+        inputSchema: {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Task title.' },
+                description: { type: 'string', description: 'Optional task description.' },
+                type: { type: 'string', description: 'Task type (task, bug, feature, epic, chore).' },
+                priority: { type: 'number', description: 'Priority (1-5, lower is higher).' },
+            },
+            required: ['title'],
+        },
+    },
+    {
         name: 'dispatchWorker',
         description: 'Dispatch a coding agent onto a ready task. Respects a max-concurrent-workers limit (default 5, configurable via FONAGENTS_MAX_WORKERS).',
         inputSchema: {
@@ -10,19 +24,19 @@ exports.MANAGER_TOOL_SCHEMAS = [
             properties: {
                 issueId: { type: 'string' },
                 runtimeId: { type: 'string', description: 'Agent runtime id (e.g. claude-code). Defaults to the manager runtime.' },
-                prompt: { type: 'string', description: 'Optional override prompt; defaults to issue context.' },
+                prompt: { type: 'string', description: 'Optional override prompt; defaults to task context.' },
             },
             required: ['issueId'],
         },
     },
     {
-        name: 'listIssues',
+        name: 'listTasks',
         description: 'List all tasks on the board, with optional filtering by status, type, assignee, etc.',
         inputSchema: {
             type: 'object',
             properties: {
-                status: { type: 'string', description: 'Filter by status (e.g. todo, in_progress, done).' },
-                type: { type: 'string', description: 'Filter by issue type (e.g. task, bug).' },
+                status: { type: 'string', description: 'Filter by status (e.g. open, in_progress, closed).' },
+                type: { type: 'string', description: 'Filter by task type (e.g. task, bug, feature).' },
                 assignee: { type: 'string', description: 'Filter by assignee.' },
             },
         },
@@ -53,7 +67,7 @@ exports.MANAGER_TOOL_SCHEMAS = [
             type: 'object',
             properties: {
                 reason: { type: 'string', description: 'Why the human is needed.' },
-                issueId: { type: 'string', description: 'Optional related issue.' },
+                issueId: { type: 'string', description: 'Optional related task id.' },
             },
             required: ['reason'],
         },
@@ -68,12 +82,12 @@ exports.MANAGER_TOOL_SCHEMAS = [
         },
     },
     {
-        name: 'completeIssue',
+        name: 'completeTask',
         description: 'Mark a task as complete.',
         inputSchema: {
             type: 'object',
-            properties: { issueId: { type: 'string' }, reason: { type: 'string' } },
-            required: ['issueId'],
+            properties: { taskId: { type: 'string' }, reason: { type: 'string' } },
+            required: ['taskId'],
         },
     },
     {

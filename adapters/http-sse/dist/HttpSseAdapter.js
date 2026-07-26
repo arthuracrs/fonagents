@@ -231,10 +231,12 @@ function createHttpSseApp(command, managerTools, eventBus, config) {
 // Dispatches an MCP tool call to the corresponding ManagerToolsPort method.
 async function executeManagerTool(tools, name, args) {
     switch (name) {
+        case 'createTask':
+            return tools.createTask(args);
         case 'dispatchWorker':
             return tools.dispatchWorker(args);
-        case 'listIssues':
-            return tools.listIssues(args);
+        case 'listTasks':
+            return tools.listTasks(args);
         case 'listReady':
             return tools.listReady();
         case 'workerStatus':
@@ -243,8 +245,8 @@ async function executeManagerTool(tools, name, args) {
             return tools.escalate(args);
         case 'recordProgress':
             return tools.recordProgress(args);
-        case 'completeIssue':
-            return tools.completeIssue(args);
+        case 'completeTask':
+            return tools.completeTask(args);
         case 'overseerStatus':
             return tools.overseerStatus();
         case 'resetStaleTasks':

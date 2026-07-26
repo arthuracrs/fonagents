@@ -12,6 +12,14 @@ import type { IssueFilter } from './IssueTrackerPort.js'
 // calls on this interface. The Orchestrator implements it by delegating to
 // IssueTrackerPort + AgentRuntimePort and emitting UiEvents.
 export interface ManagerToolsPort {
+  // Create a new task on the board.
+  createTask(input: {
+    title: string
+    description?: string
+    type?: string
+    priority?: number
+  }): Promise<{ taskId: IssueId }>
+
   // Dispatch a worker onto a ready task.
   dispatchWorker(input: {
     issueId: IssueId
@@ -20,7 +28,7 @@ export interface ManagerToolsPort {
   }): Promise<{ workerId: WorkerId }>
 
   // List all tasks on the board, with optional filtering.
-  listIssues(input?: IssueFilter): Promise<Issue[]>
+  listTasks(input?: IssueFilter): Promise<Issue[]>
 
   // List ready tasks.
   listReady(): Promise<{ issueId: IssueId; title: string; status: string }[]>
@@ -36,12 +44,12 @@ export interface ManagerToolsPort {
   // UI surfaces it. The manager blocks (its turn does not end) until resolved.
   escalate(input: { reason: string; issueId?: IssueId }): Promise<{ gateId: string }>
 
-  // Record progress on an issue (audit trail). Distinct from UiCommandPort.addComment
+  // Record progress on a task (audit trail). Distinct from UiCommandPort.addComment
   // to avoid signature collision on the Orchestrator.
   recordProgress(input: { issueId: IssueId; body: string }): Promise<void>
 
-  // Mark an issue as complete. Distinct from UiCommandPort.closeIssue.
-  completeIssue(input: { issueId: IssueId; reason?: string }): Promise<void>
+  // Mark a task as complete. Distinct from UiCommandPort.closeIssue.
+  completeTask(input: { taskId: IssueId; reason?: string }): Promise<void>
 
   // Reset in_progress tasks that have no active workers back to open.
   // Recovers from stale state after machine reboots or crashed workers.
@@ -66,6 +74,20 @@ export interface ToolSchema {
 
 export const MANAGER_TOOL_SCHEMAS: ToolSchema[] = [
   {
+    name: 'createTask',
+    description: 'Create a new task on the board.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Task title.' },
+        description: { type: 'string', description: 'Optional task description.' },
+        type: { type: 'string', description: 'Task type (task, bug, feature, epic, chore).' },
+        priority: { type: 'number', description: 'Priority (1-5, lower is higher).' },
+      },
+      required: ['title'],
+    },
+  },
+  {
     name: 'dispatchWorker',
     description: 'Dispatch a coding agent onto a ready task. Respects a max-concurrent-workers limit (default 5, configurable via FONAGENTS_MAX_WORKERS).',
     inputSchema: {
@@ -73,19 +95,19 @@ export const MANAGER_TOOL_SCHEMAS: ToolSchema[] = [
       properties: {
         issueId: { type: 'string' },
         runtimeId: { type: 'string', description: 'Agent runtime id (e.g. claude-code). Defaults to the manager runtime.' },
-        prompt: { type: 'string', description: 'Optional override prompt; defaults to issue context.' },
+        prompt: { type: 'string', description: 'Optional override prompt; defaults to task context.' },
       },
       required: ['issueId'],
     },
   },
   {
-    name: 'listIssues',
+    name: 'listTasks',
     description: 'List all tasks on the board, with optional filtering by status, type, assignee, etc.',
     inputSchema: {
       type: 'object',
       properties: {
-        status: { type: 'string', description: 'Filter by status (e.g. todo, in_progress, done).' },
-        type: { type: 'string', description: 'Filter by issue type (e.g. task, bug).' },
+        status: { type: 'string', description: 'Filter by status (e.g. open, in_progress, closed).' },
+        type: { type: 'string', description: 'Filter by task type (e.g. task, bug, feature).' },
         assignee: { type: 'string', description: 'Filter by assignee.' },
       },
     },
@@ -116,7 +138,7 @@ export const MANAGER_TOOL_SCHEMAS: ToolSchema[] = [
       type: 'object',
       properties: {
         reason: { type: 'string', description: 'Why the human is needed.' },
-        issueId: { type: 'string', description: 'Optional related issue.' },
+        issueId: { type: 'string', description: 'Optional related task id.' },
       },
       required: ['reason'],
     },
@@ -131,12 +153,12 @@ export const MANAGER_TOOL_SCHEMAS: ToolSchema[] = [
     },
   },
   {
-    name: 'completeIssue',
+    name: 'completeTask',
     description: 'Mark a task as complete.',
     inputSchema: {
       type: 'object',
-      properties: { issueId: { type: 'string' }, reason: { type: 'string' } },
-      required: ['issueId'],
+      properties: { taskId: { type: 'string' }, reason: { type: 'string' } },
+      required: ['taskId'],
     },
   },
   {

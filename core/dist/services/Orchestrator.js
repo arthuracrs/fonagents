@@ -51,6 +51,16 @@ class Orchestrator {
         return this.tracker.addDependency(childId, parentId, type);
     }
     // ── ManagerToolsPort: tools the manager LLM calls via MCP ──────────────────────
+    async createTask(input) {
+        const issue = await this.tracker.createIssue({
+            title: input.title,
+            description: input.description,
+            type: (input.type ?? 'task'),
+            priority: input.priority,
+        });
+        return { taskId: issue.id };
+    }
+    listTasks(filter) { return this.listIssues(filter); }
     async dispatchWorker(input) {
         const max = this.config.maxWorkers ?? 5;
         const active = this.workerSubscriptions.size;
@@ -112,12 +122,12 @@ class Orchestrator {
         await this.tracker.addComment(input.issueId, input.body, 'fonagents-manager');
         this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'commented' });
     }
-    async completeIssue(input) {
-        await this.tracker.closeIssue(input.issueId, input.reason);
-        this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'closed' });
+    async completeTask(input) {
+        await this.tracker.closeIssue(input.taskId, input.reason);
+        this.emit({ type: 'issue_changed', issueId: input.taskId, change: 'closed' });
         const workers = this.runtime.listWorkers();
         for (const w of workers) {
-            if (w.issueId === input.issueId && w.status === 'running') {
+            if (w.issueId === input.taskId && w.status === 'running') {
                 await this.runtime.cancelWorker(w.id);
             }
         }

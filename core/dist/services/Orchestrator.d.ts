@@ -38,6 +38,15 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
     claimIssue(id: IssueId): Promise<Issue>;
     addComment(issueId: IssueId, body: string): Promise<Comment>;
     addDependency(childId: IssueId, parentId: IssueId, type?: string): Promise<void>;
+    createTask(input: {
+        title: string;
+        description?: string;
+        type?: string;
+        priority?: number;
+    }): Promise<{
+        taskId: IssueId;
+    }>;
+    listTasks(filter?: IssueFilter): Promise<Issue[]>;
     dispatchWorker(input: {
         issueId: IssueId;
         runtimeId?: string;
@@ -68,8 +77,8 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
         issueId: IssueId;
         body: string;
     }): Promise<void>;
-    completeIssue(input: {
-        issueId: IssueId;
+    completeTask(input: {
+        taskId: IssueId;
         reason?: string;
     }): Promise<void>;
     resetStaleTasks(): Promise<{

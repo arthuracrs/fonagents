@@ -83,6 +83,23 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
 
   // ── ManagerToolsPort: tools the manager LLM calls via MCP ──────────────────────
 
+  async createTask(input: {
+    title: string
+    description?: string
+    type?: string
+    priority?: number
+  }): Promise<{ taskId: IssueId }> {
+    const issue = await this.tracker.createIssue({
+      title: input.title,
+      description: input.description,
+      type: (input.type ?? 'task') as any,
+      priority: input.priority,
+    })
+    return { taskId: issue.id }
+  }
+
+  listTasks(filter?: IssueFilter): Promise<Issue[]> { return this.listIssues(filter) }
+
   async dispatchWorker(input: {
     issueId: IssueId
     runtimeId?: string
@@ -155,12 +172,12 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
     this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'commented' })
   }
 
-  async completeIssue(input: { issueId: IssueId; reason?: string }): Promise<void> {
-    await this.tracker.closeIssue(input.issueId, input.reason)
-    this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'closed' })
+  async completeTask(input: { taskId: IssueId; reason?: string }): Promise<void> {
+    await this.tracker.closeIssue(input.taskId, input.reason)
+    this.emit({ type: 'issue_changed', issueId: input.taskId, change: 'closed' })
     const workers = this.runtime.listWorkers()
     for (const w of workers) {
-      if (w.issueId === input.issueId && w.status === 'running') {
+      if (w.issueId === input.taskId && w.status === 'running') {
         await this.runtime.cancelWorker(w.id)
       }
     }

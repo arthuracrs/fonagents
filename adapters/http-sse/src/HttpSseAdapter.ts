@@ -269,10 +269,12 @@ async function executeManagerTool(
   args: Record<string, unknown>,
 ): Promise<unknown> {
   switch (name) {
+    case 'createTask':
+      return tools.createTask(args as { title: string; description?: string; type?: string; priority?: number })
     case 'dispatchWorker':
       return tools.dispatchWorker(args as { issueId: string; runtimeId?: string; prompt?: string })
-    case 'listIssues':
-      return tools.listIssues(args as Record<string, unknown>)
+    case 'listTasks':
+      return tools.listTasks(args as Record<string, unknown>)
     case 'listReady':
       return tools.listReady()
     case 'workerStatus':
@@ -281,8 +283,8 @@ async function executeManagerTool(
       return tools.escalate(args as { reason: string; issueId?: string })
     case 'recordProgress':
       return tools.recordProgress(args as { issueId: string; body: string })
-    case 'completeIssue':
-      return tools.completeIssue(args as { issueId: string; reason?: string })
+    case 'completeTask':
+      return tools.completeTask(args as { taskId: string; reason?: string })
     case 'overseerStatus':
       return tools.overseerStatus()
     case 'resetStaleTasks':

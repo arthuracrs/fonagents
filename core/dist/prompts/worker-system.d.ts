@@ -1,2 +1,2 @@
-export declare function buildWorkerSystemPrompt(issueId: string): string;
+export declare function buildWorkerSystemPrompt(taskId: string): string;
 //# sourceMappingURL=worker-system.d.ts.map

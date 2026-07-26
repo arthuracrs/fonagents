@@ -1,6 +1,14 @@
 import type { Issue, IssueId, RuntimeId, WorkerId } from '../domain/types.js';
 import type { IssueFilter } from './IssueTrackerPort.js';
 export interface ManagerToolsPort {
+    createTask(input: {
+        title: string;
+        description?: string;
+        type?: string;
+        priority?: number;
+    }): Promise<{
+        taskId: IssueId;
+    }>;
     dispatchWorker(input: {
         issueId: IssueId;
         runtimeId?: RuntimeId;
@@ -8,7 +16,7 @@ export interface ManagerToolsPort {
     }): Promise<{
         workerId: WorkerId;
     }>;
-    listIssues(input?: IssueFilter): Promise<Issue[]>;
+    listTasks(input?: IssueFilter): Promise<Issue[]>;
     listReady(): Promise<{
         issueId: IssueId;
         title: string;
@@ -32,8 +40,8 @@ export interface ManagerToolsPort {
         issueId: IssueId;
         body: string;
     }): Promise<void>;
-    completeIssue(input: {
-        issueId: IssueId;
+    completeTask(input: {
+        taskId: IssueId;
         reason?: string;
     }): Promise<void>;
     resetStaleTasks(): Promise<{

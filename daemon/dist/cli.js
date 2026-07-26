@@ -74,6 +74,20 @@ var require_ManagerToolsPort = __commonJS({
     exports2.MANAGER_TOOL_SCHEMAS = void 0;
     exports2.MANAGER_TOOL_SCHEMAS = [
       {
+        name: "createTask",
+        description: "Create a new task on the board.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "Task title." },
+            description: { type: "string", description: "Optional task description." },
+            type: { type: "string", description: "Task type (task, bug, feature, epic, chore)." },
+            priority: { type: "number", description: "Priority (1-5, lower is higher)." }
+          },
+          required: ["title"]
+        }
+      },
+      {
         name: "dispatchWorker",
         description: "Dispatch a coding agent onto a ready task. Respects a max-concurrent-workers limit (default 5, configurable via FONAGENTS_MAX_WORKERS).",
         inputSchema: {
@@ -81,19 +95,19 @@ var require_ManagerToolsPort = __commonJS({
           properties: {
             issueId: { type: "string" },
             runtimeId: { type: "string", description: "Agent runtime id (e.g. claude-code). Defaults to the manager runtime." },
-            prompt: { type: "string", description: "Optional override prompt; defaults to issue context." }
+            prompt: { type: "string", description: "Optional override prompt; defaults to task context." }
           },
           required: ["issueId"]
         }
       },
       {
-        name: "listIssues",
+        name: "listTasks",
         description: "List all tasks on the board, with optional filtering by status, type, assignee, etc.",
         inputSchema: {
           type: "object",
           properties: {
-            status: { type: "string", description: "Filter by status (e.g. todo, in_progress, done)." },
-            type: { type: "string", description: "Filter by issue type (e.g. task, bug)." },
+            status: { type: "string", description: "Filter by status (e.g. open, in_progress, closed)." },
+            type: { type: "string", description: "Filter by task type (e.g. task, bug, feature)." },
             assignee: { type: "string", description: "Filter by assignee." }
           }
         }
@@ -124,7 +138,7 @@ var require_ManagerToolsPort = __commonJS({
           type: "object",
           properties: {
             reason: { type: "string", description: "Why the human is needed." },
-            issueId: { type: "string", description: "Optional related issue." }
+            issueId: { type: "string", description: "Optional related task id." }
           },
           required: ["reason"]
         }
@@ -139,12 +153,12 @@ var require_ManagerToolsPort = __commonJS({
         }
       },
       {
-        name: "completeIssue",
+        name: "completeTask",
         description: "Mark a task as complete.",
         inputSchema: {
           type: "object",
-          properties: { issueId: { type: "string" }, reason: { type: "string" } },
-          required: ["issueId"]
+          properties: { taskId: { type: "string" }, reason: { type: "string" } },
+          required: ["taskId"]
         }
       },
       {
@@ -195,8 +209,8 @@ var require_worker_system = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.buildWorkerSystemPrompt = buildWorkerSystemPrompt;
-    function buildWorkerSystemPrompt(issueId) {
-      return `You are a worker agent executing task ${issueId}. Use the fonagents_* MCP tools to view task data, record progress, and complete the task. If it is the case and makes sense for the task, git commit it, be aware that other workers might be working in the same project at the same time.`;
+    function buildWorkerSystemPrompt(taskId) {
+      return `You are a worker agent executing task ${taskId}. Use the fonagents_* MCP tools to view task data, record progress, and complete the task. If it is the case and makes sense for the task, git commit it, be aware that other workers might be working in the same project at the same time.`;
     }
   }
 });
@@ -207,18 +221,23 @@ var require_manager_system = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.MANAGER_PROMPT = void 0;
-    exports2.MANAGER_PROMPT = `You are the fonagents Manager. You coordinate AI-assisted development by breaking down work, dispatching agents, and tracking progress through TaskForge.
+    exports2.MANAGER_PROMPT = `You are the fonagents Manager. You coordinate AI-assisted development by creating tasks, dispatching agents, and tracking progress through TaskForge.
 
 Available MCP tools (fonagents):
+
+tool  | createTask
+---   | ---
+input | title (string, required), description (string, optional), type (string, optional), priority (number, optional)
+desc  | Create a new task on the board.
 
 tool  | dispatchWorker
 ---   | ---
 input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
 desc  | Dispatch a coding agent onto a ready task.
 
-tool  | listIssues
+tool  | listTasks
 ---   | ---
-input | status (string, optional), title (string, optional)
+input | status (string, optional), type (string, optional), assignee (string, optional)
 desc  | List all tasks on the board, with optional filtering.
 
 tool  | listReady
@@ -233,7 +252,7 @@ desc  | Inspect worker progress by worker id or task id.
 
 tool  | escalate
 ---   | ---
-input | reason (string, required), issueId (string, required)
+input | reason (string, required), issueId (string, optional)
 desc  | Escalate to the human. Creates a human gate and blocks until resolved via the UI.
 
 tool  | recordProgress
@@ -241,9 +260,9 @@ tool  | recordProgress
 input | issueId (string, required), body (string, required)
 desc  | Record a progress comment on a task (audit trail).
 
-tool  | completeIssue
+tool  | completeTask
 ---   | ---
-input | issueId (string, required), reason (string, optional)
+input | taskId (string, required), reason (string, optional)
 desc  | Mark a task as complete.
 
 tool  | overseerStatus
@@ -257,17 +276,18 @@ input | (none)
 desc  | Reset in_progress tasks with no active workers back to open. Recovers from stale state after crashes or reboots.
 
 Workflow:
-1. On startup, use \`listIssues\` to survey the full task board.
-2. Use \`listReady\` to see available work.
-3. Dispatch \`dispatchWorker\` to assign tasks to coding agents.
-4. Monitor progress with \`workerStatus\`.
-5. Record updates with \`recordProgress\`.
-6. Mark completed tasks with \`completeIssue\`.
-7. Use \`escalate\` when you need human input or approval.
-8. Use \`overseerStatus\` to check if the auto-dispatch overseer is running.
+1. On startup, use \`listTasks\` to survey the full task board.
+2. When the user gives a high-level request, use \`createTask\` to create tasks.
+3. Use \`listReady\` to see available work.
+4. Dispatch \`dispatchWorker\` to assign tasks to coding agents.
+5. Monitor progress with \`workerStatus\`.
+6. Record updates with \`recordProgress\`.
+7. Mark completed tasks with \`completeTask\`.
+8. Use \`escalate\` when you need human input or approval.
+9. Use \`overseerStatus\` to check if the auto-dispatch overseer is running.
 
 System health check (run this regularly):
-1. Use \`listIssues\` to see all tasks and their statuses across the board.
+1. Use \`listTasks\` to see all tasks and their statuses across the board.
 2. If ALL tasks are in_progress but \`workerStatus\` shows zero active workers, call \`resetStaleTasks\` to recover.
 3. For each in_progress task, call \`workerStatus\` with its issueId to check if a worker is running.
 4. If a task is in_progress but no worker is running for it:
@@ -307,6 +327,11 @@ var require_overseer_system = __commonJS({
 
 Available MCP tools (fonagents):
 
+tool  | createTask
+---   | ---
+input | title (string, required), description (string, optional), type (string, optional), priority (number, optional)
+desc  | Create a new task on the board.
+
 tool  | dispatchWorker
 ---   | ---
 input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
@@ -324,7 +349,7 @@ desc  | Inspect worker progress by worker id or task id.
 
 tool  | escalate
 ---   | ---
-input | reason (string, required), issueId (string, required)
+input | reason (string, required), issueId (string, optional)
 desc  | Escalate to the human. Creates a human gate and blocks until resolved via the UI.
 
 tool  | recordProgress
@@ -332,9 +357,9 @@ tool  | recordProgress
 input | issueId (string, required), body (string, required)
 desc  | Record a progress comment on a task (audit trail).
 
-tool  | completeIssue
+tool  | completeTask
 ---   | ---
-input | issueId (string, required), reason (string, optional)
+input | taskId (string, required), reason (string, optional)
 desc  | Mark a task as complete.
 
 Workflow:
@@ -344,7 +369,7 @@ Workflow:
    a. If ready (unblocked), dispatch a worker.
    b. If blocked or stuck, record progress then escalate.
 4. If in_progress with a running worker, check progress.
-5. Complete done tasks: use \`completeIssue\`.
+5. Complete done tasks: use \`completeTask\`.
 6. Check ready work: use \`listReady\`.
 7. Dispatch workers on ready tasks: use \`dispatchWorker\`.
 8. If no ready work and no active workers, exit.
@@ -492,6 +517,18 @@ var require_Orchestrator = __commonJS({
         return this.tracker.addDependency(childId, parentId, type);
       }
       // ── ManagerToolsPort: tools the manager LLM calls via MCP ──────────────────────
+      async createTask(input) {
+        const issue = await this.tracker.createIssue({
+          title: input.title,
+          description: input.description,
+          type: input.type ?? "task",
+          priority: input.priority
+        });
+        return { taskId: issue.id };
+      }
+      listTasks(filter) {
+        return this.listIssues(filter);
+      }
       async dispatchWorker(input) {
         const max = this.config.maxWorkers ?? 5;
         const active = this.workerSubscriptions.size;
@@ -553,12 +590,12 @@ var require_Orchestrator = __commonJS({
         await this.tracker.addComment(input.issueId, input.body, "fonagents-manager");
         this.emit({ type: "issue_changed", issueId: input.issueId, change: "commented" });
       }
-      async completeIssue(input) {
-        await this.tracker.closeIssue(input.issueId, input.reason);
-        this.emit({ type: "issue_changed", issueId: input.issueId, change: "closed" });
+      async completeTask(input) {
+        await this.tracker.closeIssue(input.taskId, input.reason);
+        this.emit({ type: "issue_changed", issueId: input.taskId, change: "closed" });
         const workers = this.runtime.listWorkers();
         for (const w of workers) {
-          if (w.issueId === input.issueId && w.status === "running") {
+          if (w.issueId === input.taskId && w.status === "running") {
             await this.runtime.cancelWorker(w.id);
           }
         }
@@ -53091,10 +53128,12 @@ var require_HttpSseAdapter = __commonJS({
     }
     async function executeManagerTool(tools, name, args) {
       switch (name) {
+        case "createTask":
+          return tools.createTask(args);
         case "dispatchWorker":
           return tools.dispatchWorker(args);
-        case "listIssues":
-          return tools.listIssues(args);
+        case "listTasks":
+          return tools.listTasks(args);
         case "listReady":
           return tools.listReady();
         case "workerStatus":
@@ -53103,8 +53142,8 @@ var require_HttpSseAdapter = __commonJS({
           return tools.escalate(args);
         case "recordProgress":
           return tools.recordProgress(args);
-        case "completeIssue":
-          return tools.completeIssue(args);
+        case "completeTask":
+          return tools.completeTask(args);
         case "overseerStatus":
           return tools.overseerStatus();
         case "resetStaleTasks":

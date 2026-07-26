@@ -2,6 +2,11 @@ export const OVERSEER_SYSTEM_PROMPT = `You are a fonagents Overseer. You automat
 
 Available MCP tools (fonagents):
 
+tool  | createTask
+---   | ---
+input | title (string, required), description (string, optional), type (string, optional), priority (number, optional)
+desc  | Create a new task on the board.
+
 tool  | dispatchWorker
 ---   | ---
 input | issueId (string, required), runtimeId (string, optional), prompt (string, optional)
@@ -19,7 +24,7 @@ desc  | Inspect worker progress by worker id or task id.
 
 tool  | escalate
 ---   | ---
-input | reason (string, required), issueId (string, required)
+input | reason (string, required), issueId (string, optional)
 desc  | Escalate to the human. Creates a human gate and blocks until resolved via the UI.
 
 tool  | recordProgress
@@ -27,9 +32,9 @@ tool  | recordProgress
 input | issueId (string, required), body (string, required)
 desc  | Record a progress comment on a task (audit trail).
 
-tool  | completeIssue
+tool  | completeTask
 ---   | ---
-input | issueId (string, required), reason (string, optional)
+input | taskId (string, required), reason (string, optional)
 desc  | Mark a task as complete.
 
 Workflow:
@@ -39,7 +44,7 @@ Workflow:
    a. If ready (unblocked), dispatch a worker.
    b. If blocked or stuck, record progress then escalate.
 4. If in_progress with a running worker, check progress.
-5. Complete done tasks: use \`completeIssue\`.
+5. Complete done tasks: use \`completeTask\`.
 6. Check ready work: use \`listReady\`.
 7. Dispatch workers on ready tasks: use \`dispatchWorker\`.
 8. If no ready work and no active workers, exit.
