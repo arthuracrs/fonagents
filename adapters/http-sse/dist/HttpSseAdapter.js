@@ -155,16 +155,6 @@ function createHttpSseApp(command, managerTools, eventBus, config) {
     app.get('/api/issues/:id/children', wrap(async (req, res) => {
         res.json(await command.children(param(req, "id")));
     }));
-    // ── Molecules & formulas ─────────────────────────────────────────────────────
-    app.get('/api/molecules', wrap(async (_req, res) => {
-        res.json(await command.listMolecules());
-    }));
-    app.get('/api/molecules/:id', wrap(async (req, res) => {
-        res.json(await command.showMolecule(param(req, "id")));
-    }));
-    app.get('/api/formulas', wrap(async (_req, res) => {
-        res.json(await command.listFormulas());
-    }));
     app.get('/api/gates', wrap(async (_req, res) => {
         res.json(await command.listGates());
     }));
@@ -241,14 +231,12 @@ function createHttpSseApp(command, managerTools, eventBus, config) {
 // Dispatches an MCP tool call to the corresponding ManagerToolsPort method.
 async function executeManagerTool(tools, name, args) {
     switch (name) {
-        case 'decompose':
-            return tools.decompose(args);
         case 'dispatchWorker':
             return tools.dispatchWorker(args);
         case 'listIssues':
             return tools.listIssues(args);
         case 'listReady':
-            return tools.listReady(args);
+            return tools.listReady();
         case 'workerStatus':
             return tools.workerStatus(args);
         case 'escalate':

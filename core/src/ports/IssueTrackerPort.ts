@@ -1,15 +1,12 @@
 import type {
   Comment,
   Dependency,
-  FormulaSummary,
   Gate,
   GateId,
   GateType,
   Issue,
   IssueId,
   IssueType,
-  Molecule,
-  MoleculeId,
   ReadyWork,
 } from '../domain/types.js'
 
@@ -40,17 +37,6 @@ export interface IssueTrackerPort {
   // ── Stale task recovery ──────────────────────────────────────────────────────
   resetStaleTasks(): Promise<Issue[]>
 
-  // ── Molecules & formulas ─────────────────────────────────────────────────────
-  listFormulas(): Promise<FormulaSummary[]>
-  showFormula(name: string): Promise<unknown>
-  pourMolecule(
-    formulaName: string,
-    vars: Record<string, string>,
-    opts?: { assignee?: string },
-  ): Promise<Molecule>
-  listMolecules(): Promise<Molecule[]>
-  showMolecule(id: MoleculeId): Promise<unknown>
-
   // ── Gates ────────────────────────────────────────────────────────────────────
   listGates(opts?: { open?: boolean }): Promise<Gate[]>
   createGate(input: { issueId: IssueId; type: GateType; reason?: string; awaitId?: string }): Promise<Gate>
@@ -67,7 +53,6 @@ export interface IssueFilter {
   assignee?: string
   labels?: string[]
   parent?: IssueId
-  moleculeId?: MoleculeId
 }
 
 export interface IssueCreateInput {
@@ -78,7 +63,6 @@ export interface IssueCreateInput {
   assignee?: string
   labels?: string[]
   parent?: IssueId
-  moleculeId?: MoleculeId
   skills?: string[]
   deps?: string[]
   waitsFor?: IssueId
@@ -93,7 +77,6 @@ export interface IssueUpdatePatch {
 }
 
 export interface ReadyWorkOpts {
-  molId?: MoleculeId
   gated?: boolean
   assignee?: string
   claim?: boolean

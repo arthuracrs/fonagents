@@ -115,16 +115,6 @@ describe('Integration: TaskForgeAdapter + HttpSseAdapter', () => {
       expect(resolved.status).toBe('closed')
     })
 
-    it('should list formulas', async () => {
-      const formulas = await adapter.listFormulas()
-      expect(Array.isArray(formulas)).toBe(true)
-    })
-
-    it('should list molecules (empty)', async () => {
-      const molecules = await adapter.listMolecules()
-      expect(molecules).toEqual([])
-    })
-
     it('should list gates', async () => {
       const issue = await adapter.createIssue({ title: 'Gates test' })
       await adapter.createGate({ issueId: issue.id, type: 'human', reason: 'Review' })
@@ -305,16 +295,6 @@ describe('Integration: TaskForgeAdapter + HttpSseAdapter', () => {
       expect(res.body.ok).toBe(true)
     })
 
-    it('GET /api/formulas should list formulas', async () => {
-      const res = await request(app).get('/api/formulas').expect(200)
-      expect(Array.isArray(res.body)).toBe(true)
-    })
-
-    it('GET /api/molecules should list molecules', async () => {
-      const res = await request(app).get('/api/molecules').expect(200)
-      expect(Array.isArray(res.body)).toBe(true)
-    })
-
     it('GET /api/graph should return dependency graph', async () => {
       const a = await adapter.createIssue({ title: 'A' })
       const b = await adapter.createIssue({ title: 'B' })
@@ -385,13 +365,6 @@ describe('Integration: TaskForgeAdapter + HttpSseAdapter', () => {
   // ── MCP tool endpoint tests ──────────────────────────────────────────────────
 
   describe('MCP tool endpoint', () => {
-    it('POST /api/mcp/tools/decompose should error for unknown template', async () => {
-      const res = await request(app)
-        .post('/api/mcp/tools/decompose')
-        .send({ formulaName: 'nonexistent', vars: {} })
-      expect(res.status).toBe(500)
-    })
-
     it('POST /api/mcp/tools/dispatchWorker should dispatch a worker', async () => {
       const issue = await adapter.createIssue({ title: 'MCP Dispatch' })
       const res = await request(app)

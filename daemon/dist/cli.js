@@ -74,18 +74,6 @@ var require_ManagerToolsPort = __commonJS({
     exports2.MANAGER_TOOL_SCHEMAS = void 0;
     exports2.MANAGER_TOOL_SCHEMAS = [
       {
-        name: "decompose",
-        description: "Break a request into a set of related tasks using a TaskForge template.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            formulaName: { type: "string", description: "Name of the TaskForge template." },
-            vars: { type: "object", description: "Variable substitutions for the template." }
-          },
-          required: ["formulaName"]
-        }
-      },
-      {
         name: "dispatchWorker",
         description: "Dispatch a coding agent onto a ready task. Respects a max-concurrent-workers limit (default 5, configurable via FONAGENTS_MAX_WORKERS).",
         inputSchema: {
@@ -106,17 +94,16 @@ var require_ManagerToolsPort = __commonJS({
           properties: {
             status: { type: "string", description: "Filter by status (e.g. todo, in_progress, done)." },
             type: { type: "string", description: "Filter by issue type (e.g. task, bug)." },
-            assignee: { type: "string", description: "Filter by assignee." },
-            moleculeId: { type: "string", description: "Filter by task group id." }
+            assignee: { type: "string", description: "Filter by assignee." }
           }
         }
       },
       {
         name: "listReady",
-        description: "List ready tasks, optionally scoped to a task group.",
+        description: "List ready tasks.",
         inputSchema: {
           type: "object",
-          properties: { moleculeId: { type: "string", description: "Optional task group id to scope to." } }
+          properties: {}
         }
       },
       {
@@ -222,14 +209,7 @@ var require_manager_system = __commonJS({
     exports2.MANAGER_PROMPT = void 0;
     exports2.MANAGER_PROMPT = `You are the fonagents Manager. You coordinate AI-assisted development by breaking down work, dispatching agents, and tracking progress through TaskForge.
 
-You express all concepts in terms of tasks, not beads or molecules.
-
 Available MCP tools (fonagents):
-
-tool  | decompose
----   | ---
-input | formulaName (string, required), vars (object, optional)
-desc  | Break a request into a set of related tasks using a TaskForge template.
 
 tool  | dispatchWorker
 ---   | ---
@@ -243,8 +223,8 @@ desc  | List all tasks on the board, with optional filtering.
 
 tool  | listReady
 ---   | ---
-input | taskGroupId (string, optional)
-desc  | List ready tasks, optionally scoped to a task group.
+input | (none)
+desc  | List ready tasks.
 
 tool  | workerStatus
 ---   | ---
@@ -253,7 +233,7 @@ desc  | Inspect worker progress by worker id or task id.
 
 tool  | escalate
 ---   | ---
-input | reason (string, required), issueId (string, optional)
+input | reason (string, required), issueId (string, required)
 desc  | Escalate to the human. Creates a human gate and blocks until resolved via the UI.
 
 tool  | recordProgress
@@ -278,14 +258,13 @@ desc  | Reset in_progress tasks with no active workers back to open. Recovers fr
 
 Workflow:
 1. On startup, use \`listIssues\` to survey the full task board.
-2. When the user gives a high-level request, use \`decompose\` to break it into tasks.
-3. Use \`listReady\` to see available work.
-4. Dispatch \`dispatchWorker\` to assign tasks to coding agents.
-5. Monitor progress with \`workerStatus\`.
-6. Record updates with \`recordProgress\`.
-7. Mark completed tasks with \`completeIssue\`.
-8. Use \`escalate\` when you need human input or approval.
-9. Use \`overseerStatus\` to check if the auto-dispatch overseer is running.
+2. Use \`listReady\` to see available work.
+3. Dispatch \`dispatchWorker\` to assign tasks to coding agents.
+4. Monitor progress with \`workerStatus\`.
+5. Record updates with \`recordProgress\`.
+6. Mark completed tasks with \`completeIssue\`.
+7. Use \`escalate\` when you need human input or approval.
+8. Use \`overseerStatus\` to check if the auto-dispatch overseer is running.
 
 System health check (run this regularly):
 1. Use \`listIssues\` to see all tasks and their statuses across the board.
@@ -326,14 +305,7 @@ var require_overseer_system = __commonJS({
     exports2.OVERSEER_SYSTEM_PROMPT = void 0;
     exports2.OVERSEER_SYSTEM_PROMPT = `You are a fonagents Overseer. You automatically review the board after workers complete and dispatch new work.
 
-You express all concepts in terms of tasks, not beads or molecules.
-
 Available MCP tools (fonagents):
-
-tool  | decompose
----   | ---
-input | formulaName (string, required), vars (object, optional)
-desc  | Break a request into a set of related tasks using a TaskForge template.
 
 tool  | dispatchWorker
 ---   | ---
@@ -342,8 +314,8 @@ desc  | Dispatch a coding agent onto a ready task.
 
 tool  | listReady
 ---   | ---
-input | taskGroupId (string, optional)
-desc  | List ready tasks, optionally scoped to a task group.
+input | (none)
+desc  | List ready tasks.
 
 tool  | workerStatus
 ---   | ---
@@ -352,7 +324,7 @@ desc  | Inspect worker progress by worker id or task id.
 
 tool  | escalate
 ---   | ---
-input | reason (string, required), issueId (string, optional)
+input | reason (string, required), issueId (string, required)
 desc  | Escalate to the human. Creates a human gate and blocks until resolved via the UI.
 
 tool  | recordProgress
@@ -451,7 +423,6 @@ var require_Orchestrator = __commonJS({
       runtime;
       events;
       config;
-      currentMoleculeId;
       workerSubscriptions = /* @__PURE__ */ new Map();
       constructor(tracker, runtime, events, config) {
         this.tracker = tracker;
@@ -477,12 +448,6 @@ var require_Orchestrator = __commonJS({
       getIssue(id) {
         return this.tracker.getIssue(id);
       }
-      listMolecules() {
-        return this.tracker.listMolecules();
-      }
-      showMolecule(id) {
-        return this.tracker.showMolecule(id);
-      }
       listGates() {
         return this.tracker.listGates({ open: true });
       }
@@ -503,9 +468,6 @@ var require_Orchestrator = __commonJS({
       }
       children(parentId) {
         return this.tracker.children(parentId);
-      }
-      listFormulas() {
-        return this.tracker.listFormulas();
       }
       // ── UiCommandPort: direct issue CRUD ──────────────────────────────────────────
       createIssue(input) {
@@ -530,13 +492,6 @@ var require_Orchestrator = __commonJS({
         return this.tracker.addDependency(childId, parentId, type);
       }
       // ── ManagerToolsPort: tools the manager LLM calls via MCP ──────────────────────
-      async decompose(input) {
-        const mol = await this.tracker.pourMolecule(input.formulaName, input.vars);
-        this.currentMoleculeId = mol.id;
-        const children = await this.tracker.children(mol.rootIssueId);
-        this.emit({ type: "molecule_poured", moleculeId: mol.id, formulaName: input.formulaName });
-        return { moleculeId: mol.id, childIssueIds: children.map((c) => c.id) };
-      }
       async dispatchWorker(input) {
         const max = this.config.maxWorkers ?? 5;
         const active = this.workerSubscriptions.size;
@@ -570,8 +525,8 @@ var require_Orchestrator = __commonJS({
         this.workerSubscriptions.set(worker.id, unsub);
         return { workerId: worker.id };
       }
-      async listReady(input) {
-        const ready = await this.tracker.readyWork({ molId: input.moleculeId });
+      async listReady() {
+        const ready = await this.tracker.readyWork();
         return ready.map((r) => ({ issueId: r.issueId, title: r.title, status: "ready" }));
       }
       async workerStatus(input) {
@@ -585,9 +540,7 @@ var require_Orchestrator = __commonJS({
         return this.runtime.listWorkers().map((w) => ({ id: w.id, status: w.status, issueId: w.issueId }));
       }
       async escalate(input) {
-        const issueId = input.issueId ?? await this.currentMoleculeRoot();
-        if (!issueId)
-          throw new Error("Cannot escalate without an issue context \u2014 provide issueId or decompose first.");
+        const { issueId } = input;
         const gate = await this.tracker.createGate({
           issueId,
           type: "human",
@@ -646,13 +599,6 @@ var require_Orchestrator = __commonJS({
           const worker = this.runtime.getWorker(workerId);
           this.emit({ type: "worker_status", workerId, issueId: worker?.issueId ?? "", status: "failed", exitCode: ev.exitCode });
         }
-      }
-      async currentMoleculeRoot() {
-        if (!this.currentMoleculeId)
-          return void 0;
-        const molecules = await this.tracker.listMolecules();
-        const mol = molecules.find((m) => m.id === this.currentMoleculeId);
-        return mol?.rootIssueId;
       }
       emit(event) {
         this.events.emit(event);
@@ -53078,15 +53024,6 @@ var require_HttpSseAdapter = __commonJS({
       app.get("/api/issues/:id/children", wrap(async (req, res) => {
         res.json(await command.children(param(req, "id")));
       }));
-      app.get("/api/molecules", wrap(async (_req, res) => {
-        res.json(await command.listMolecules());
-      }));
-      app.get("/api/molecules/:id", wrap(async (req, res) => {
-        res.json(await command.showMolecule(param(req, "id")));
-      }));
-      app.get("/api/formulas", wrap(async (_req, res) => {
-        res.json(await command.listFormulas());
-      }));
       app.get("/api/gates", wrap(async (_req, res) => {
         res.json(await command.listGates());
       }));
@@ -53154,14 +53091,12 @@ var require_HttpSseAdapter = __commonJS({
     }
     async function executeManagerTool(tools, name, args) {
       switch (name) {
-        case "decompose":
-          return tools.decompose(args);
         case "dispatchWorker":
           return tools.dispatchWorker(args);
         case "listIssues":
           return tools.listIssues(args);
         case "listReady":
-          return tools.listReady(args);
+          return tools.listReady();
         case "workerStatus":
           return tools.workerStatus(args);
         case "escalate":
@@ -53493,34 +53428,6 @@ var TaskForgeAdapter = class {
       reset.push(toIssue(updated));
     }
     return reset;
-  }
-  async listFormulas() {
-    const templates = await this.forge.templates.list();
-    return templates.map((t) => ({
-      name: t.name,
-      description: t.description
-    }));
-  }
-  async showFormula(name) {
-    return this.forge.templates.get(name);
-  }
-  async pourMolecule(formulaName, vars, opts) {
-    const tasks = await this.forge.templates.pour(formulaName, vars);
-    const root = tasks[0];
-    return {
-      id: `mol-${root.id}`,
-      formulaName,
-      rootIssueId: root.id,
-      molType: "swarm",
-      status: "active",
-      variables: vars
-    };
-  }
-  async listMolecules() {
-    return [];
-  }
-  async showMolecule(id) {
-    return null;
   }
   async listGates(opts) {
     let gates = await this.forge.gates.list();

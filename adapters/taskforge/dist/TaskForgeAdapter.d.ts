@@ -1,4 +1,4 @@
-import type { IssueTrackerPort, Issue, IssueId, IssueFilter, IssueCreateInput, IssueUpdatePatch, Comment, Dependency, Gate, GateId, GateType, Molecule, MoleculeId, FormulaSummary, ReadyWork } from '@fonagents/core';
+import type { IssueTrackerPort, Issue, IssueId, IssueFilter, IssueCreateInput, IssueUpdatePatch, Comment, Dependency, Gate, GateId, GateType, ReadyWork } from '@fonagents/core';
 export interface TaskForgeAdapterConfig {
     dbPath?: string;
 }
@@ -18,19 +18,11 @@ export declare class TaskForgeAdapter implements IssueTrackerPort {
     addDependency(childId: IssueId, parentId: IssueId, type?: string): Promise<void>;
     children(parentId: IssueId): Promise<Issue[]>;
     readyWork(opts?: {
-        molId?: MoleculeId;
         gated?: boolean;
         assignee?: string;
         claim?: boolean;
     }): Promise<ReadyWork[]>;
     resetStaleTasks(): Promise<Issue[]>;
-    listFormulas(): Promise<FormulaSummary[]>;
-    showFormula(name: string): Promise<unknown>;
-    pourMolecule(formulaName: string, vars: Record<string, string>, opts?: {
-        assignee?: string;
-    }): Promise<Molecule>;
-    listMolecules(): Promise<Molecule[]>;
-    showMolecule(id: MoleculeId): Promise<unknown>;
     listGates(opts?: {
         open?: boolean;
     }): Promise<Gate[]>;

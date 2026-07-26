@@ -1,4 +1,4 @@
-import type { Issue, IssueId, MoleculeId, RuntimeId, WorkerId } from '../domain/types.js'
+import type { Issue, IssueId, RuntimeId, WorkerId } from '../domain/types.js'
 import type { IssueFilter } from './IssueTrackerPort.js'
 
 // Tools core exposes to the manager LLM via MCP.
@@ -12,13 +12,6 @@ import type { IssueFilter } from './IssueTrackerPort.js'
 // calls on this interface. The Orchestrator implements it by delegating to
 // IssueTrackerPort + AgentRuntimePort and emitting UiEvents.
 export interface ManagerToolsPort {
-  // Break a request into a set of related tasks. Returns the task group id +
-  // the child task ids the manager can then dispatch workers onto.
-  decompose(input: {
-    formulaName: string
-    vars: Record<string, string>
-  }): Promise<{ moleculeId: MoleculeId; childIssueIds: IssueId[] }>
-
   // Dispatch a worker onto a ready task.
   dispatchWorker(input: {
     issueId: IssueId
@@ -29,8 +22,8 @@ export interface ManagerToolsPort {
   // List all tasks on the board, with optional filtering.
   listIssues(input?: IssueFilter): Promise<Issue[]>
 
-  // List ready tasks, optionally scoped to a task group.
-  listReady(input: { moleculeId?: MoleculeId }): Promise<{ issueId: IssueId; title: string; status: string }[]>
+  // List ready tasks.
+  listReady(): Promise<{ issueId: IssueId; title: string; status: string }[]>
 
   // Inspect worker progress.
   workerStatus(input: { workerId?: WorkerId; issueId?: IssueId }): Promise<{
@@ -73,18 +66,6 @@ export interface ToolSchema {
 
 export const MANAGER_TOOL_SCHEMAS: ToolSchema[] = [
   {
-    name: 'decompose',
-    description: 'Break a request into a set of related tasks using a TaskForge template.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        formulaName: { type: 'string', description: 'Name of the TaskForge template.' },
-        vars: { type: 'object', description: 'Variable substitutions for the template.' },
-      },
-      required: ['formulaName'],
-    },
-  },
-  {
     name: 'dispatchWorker',
     description: 'Dispatch a coding agent onto a ready task. Respects a max-concurrent-workers limit (default 5, configurable via FONAGENTS_MAX_WORKERS).',
     inputSchema: {
@@ -106,16 +87,15 @@ export const MANAGER_TOOL_SCHEMAS: ToolSchema[] = [
         status: { type: 'string', description: 'Filter by status (e.g. todo, in_progress, done).' },
         type: { type: 'string', description: 'Filter by issue type (e.g. task, bug).' },
         assignee: { type: 'string', description: 'Filter by assignee.' },
-        moleculeId: { type: 'string', description: 'Filter by task group id.' },
       },
     },
   },
   {
     name: 'listReady',
-    description: 'List ready tasks, optionally scoped to a task group.',
+    description: 'List ready tasks.',
     inputSchema: {
       type: 'object',
-      properties: { moleculeId: { type: 'string', description: 'Optional task group id to scope to.' } },
+      properties: {},
     },
   },
   {

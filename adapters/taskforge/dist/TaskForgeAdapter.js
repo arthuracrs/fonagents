@@ -195,34 +195,6 @@ export class TaskForgeAdapter {
         }
         return reset;
     }
-    async listFormulas() {
-        const templates = await this.forge.templates.list();
-        return templates.map((t) => ({
-            name: t.name,
-            description: t.description,
-        }));
-    }
-    async showFormula(name) {
-        return this.forge.templates.get(name);
-    }
-    async pourMolecule(formulaName, vars, opts) {
-        const tasks = await this.forge.templates.pour(formulaName, vars);
-        const root = tasks[0];
-        return {
-            id: `mol-${root.id}`,
-            formulaName,
-            rootIssueId: root.id,
-            molType: 'swarm',
-            status: 'active',
-            variables: vars,
-        };
-    }
-    async listMolecules() {
-        return [];
-    }
-    async showMolecule(id) {
-        return null;
-    }
     async listGates(opts) {
         let gates = await this.forge.gates.list();
         if (opts?.open === true) {

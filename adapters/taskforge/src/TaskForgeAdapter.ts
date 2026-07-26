@@ -12,9 +12,6 @@ import type {
   Gate,
   GateId,
   GateType,
-  Molecule,
-  MoleculeId,
-  FormulaSummary,
   ReadyWork,
 } from '@fonagents/core';
 
@@ -193,7 +190,6 @@ export class TaskForgeAdapter implements IssueTrackerPort {
   }
 
   async readyWork(opts?: {
-    molId?: MoleculeId;
     gated?: boolean;
     assignee?: string;
     claim?: boolean;
@@ -221,43 +217,6 @@ export class TaskForgeAdapter implements IssueTrackerPort {
       reset.push(toIssue(updated));
     }
     return reset;
-  }
-
-  async listFormulas(): Promise<FormulaSummary[]> {
-    const templates = await this.forge.templates.list();
-    return templates.map((t: any) => ({
-      name: t.name,
-      description: t.description,
-    }));
-  }
-
-  async showFormula(name: string): Promise<unknown> {
-    return this.forge.templates.get(name);
-  }
-
-  async pourMolecule(
-    formulaName: string,
-    vars: Record<string, string>,
-    opts?: { assignee?: string },
-  ): Promise<Molecule> {
-    const tasks = await this.forge.templates.pour(formulaName, vars);
-    const root = tasks[0];
-    return {
-      id: `mol-${root.id}`,
-      formulaName,
-      rootIssueId: root.id,
-      molType: 'swarm',
-      status: 'active',
-      variables: vars,
-    };
-  }
-
-  async listMolecules(): Promise<Molecule[]> {
-    return [];
-  }
-
-  async showMolecule(id: MoleculeId): Promise<unknown> {
-    return null;
   }
 
   async listGates(opts?: { open?: boolean }): Promise<Gate[]> {

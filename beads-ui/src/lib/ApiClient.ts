@@ -1,4 +1,4 @@
-import type { Issue, Stats, AgentExecution, AgentTrigger, AgentRuntime, Formula, UiEvent, Gate, OverseerStatus } from "../types";
+import type { Issue, Stats, AgentExecution, AgentTrigger, AgentRuntime, UiEvent, Gate, OverseerStatus } from "../types";
 
 class HttpClient {
   constructor(private readonly base: string) {}
@@ -116,18 +116,6 @@ class ExecutionsApi {
   }
 }
 
-class FormulasApi {
-  constructor(private readonly http: HttpClient) {}
-
-  list(): Promise<Formula[]> {
-    return this.http.request<Formula[]>("/formulas");
-  }
-
-  get(name: string): Promise<Formula> {
-    return this.http.request<Formula>(`/formulas/${encodeURIComponent(name)}`);
-  }
-}
-
 class TriggersApi {
   constructor(private readonly http: HttpClient) {}
 
@@ -178,7 +166,6 @@ export class ApiClient {
   readonly runtimes: RuntimesApi;
   readonly executions: ExecutionsApi;
   readonly triggers: TriggersApi;
-  readonly formulas: FormulasApi;
   readonly gates: GatesApi;
   private readonly http: HttpClient;
 
@@ -189,7 +176,6 @@ export class ApiClient {
     this.runtimes = new RuntimesApi(this.http);
     this.executions = new ExecutionsApi(this.http);
     this.triggers = new TriggersApi(this.http);
-    this.formulas = new FormulasApi(this.http);
     this.gates = new GatesApi(this.http);
   }
 

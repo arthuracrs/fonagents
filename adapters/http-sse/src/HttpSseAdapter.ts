@@ -175,19 +175,6 @@ export function createHttpSseApp(
     res.json(await command.children(param(req, "id")))
   }))
 
-  // ── Molecules & formulas ─────────────────────────────────────────────────────
-  app.get('/api/molecules', wrap(async (_req, res) => {
-    res.json(await command.listMolecules())
-  }))
-
-  app.get('/api/molecules/:id', wrap(async (req, res) => {
-    res.json(await command.showMolecule(param(req, "id")))
-  }))
-
-  app.get('/api/formulas', wrap(async (_req, res) => {
-    res.json(await command.listFormulas())
-  }))
-
   app.get('/api/gates', wrap(async (_req, res) => {
     res.json(await command.listGates())
   }))
@@ -282,14 +269,12 @@ async function executeManagerTool(
   args: Record<string, unknown>,
 ): Promise<unknown> {
   switch (name) {
-    case 'decompose':
-      return tools.decompose(args as { formulaName: string; vars: Record<string, string> })
     case 'dispatchWorker':
       return tools.dispatchWorker(args as { issueId: string; runtimeId?: string; prompt?: string })
     case 'listIssues':
       return tools.listIssues(args as Record<string, unknown>)
     case 'listReady':
-      return tools.listReady(args as { moleculeId?: string })
+      return tools.listReady()
     case 'workerStatus':
       return tools.workerStatus(args as { workerId?: string; issueId?: string })
     case 'escalate':

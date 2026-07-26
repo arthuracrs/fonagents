@@ -1,4 +1,4 @@
-import type { Comment, Dependency, FormulaSummary, Gate, GateId, Issue, IssueId, Molecule, MoleculeId, RuntimeInfo, WorkerHandle, WorkerId } from '../domain/types.js';
+import type { Comment, Dependency, Gate, GateId, Issue, IssueId, RuntimeInfo, WorkerHandle, WorkerId } from '../domain/types.js';
 import type { AgentRuntimePort } from '../ports/AgentRuntimePort.js';
 import type { IssueCreateInput, IssueFilter, IssueTrackerPort, IssueUpdatePatch } from '../ports/IssueTrackerPort.js';
 import type { ManagerToolsPort } from '../ports/ManagerToolsPort.js';
@@ -18,15 +18,12 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
     private readonly runtime;
     private readonly events;
     private readonly config;
-    private currentMoleculeId?;
     private readonly workerSubscriptions;
     constructor(tracker: IssueTrackerPort, runtime: AgentRuntimePort, events: UiEventPort, config: OrchestratorConfig);
     resolveGate(gateId: GateId, note?: string): Promise<void>;
     cancelWorker(workerId: WorkerId): Promise<void>;
     listIssues(filter?: IssueFilter): Promise<Issue[]>;
     getIssue(id: IssueId): Promise<Issue | undefined>;
-    listMolecules(): Promise<Molecule[]>;
-    showMolecule(id: MoleculeId): Promise<unknown>;
     listGates(): Promise<Gate[]>;
     getWorkerStatus(workerId: WorkerId): Promise<WorkerHandle | undefined>;
     listWorkers(): Promise<WorkerHandle[]>;
@@ -34,7 +31,6 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
     listComments(issueId: IssueId): Promise<Comment[]>;
     listDependencies(issueId: IssueId): Promise<Dependency[]>;
     children(parentId: IssueId): Promise<Issue[]>;
-    listFormulas(): Promise<FormulaSummary[]>;
     createIssue(input: IssueCreateInput): Promise<Issue>;
     updateIssue(id: IssueId, patch: IssueUpdatePatch): Promise<Issue>;
     closeIssue(id: IssueId, reason?: string): Promise<Issue>;
@@ -42,13 +38,6 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
     claimIssue(id: IssueId): Promise<Issue>;
     addComment(issueId: IssueId, body: string): Promise<Comment>;
     addDependency(childId: IssueId, parentId: IssueId, type?: string): Promise<void>;
-    decompose(input: {
-        formulaName: string;
-        vars: Record<string, string>;
-    }): Promise<{
-        moleculeId: MoleculeId;
-        childIssueIds: IssueId[];
-    }>;
     dispatchWorker(input: {
         issueId: IssueId;
         runtimeId?: string;
@@ -56,9 +45,7 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
     }): Promise<{
         workerId: WorkerId;
     }>;
-    listReady(input: {
-        moleculeId?: MoleculeId;
-    }): Promise<{
+    listReady(): Promise<{
         issueId: IssueId;
         title: string;
         status: string;
@@ -73,7 +60,7 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
     }[]>;
     escalate(input: {
         reason: string;
-        issueId?: IssueId;
+        issueId: IssueId;
     }): Promise<{
         gateId: string;
     }>;
@@ -99,7 +86,6 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
         mode: string;
     }): void;
     private forwardWorkerEvent;
-    private currentMoleculeRoot;
     private emit;
 }
 //# sourceMappingURL=Orchestrator.d.ts.map

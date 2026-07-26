@@ -6,15 +6,13 @@ import { Sidebar, type View } from "./components/Sidebar";
 import { KanbanBoard } from "./components/KanbanBoard";
 import { IssueDetail } from "./components/IssueDetail";
 import { ExecutionView } from "./components/ExecutionView";
-import { FormulasView } from "./components/FormulasView";
 import { DependencyGraphView } from "./components/DependencyGraphView";
 import { StatsBar } from "./components/StatsBar";
 
-const NON_ISSUE_VIEWS = new Set(["formulas", "graph"]);
+const NON_ISSUE_VIEWS = new Set(["graph"]);
 
 const viewLabel: Record<View, string> = {
   all: "Board",
-  formulas: "Formulas",
   graph: "Dependency Graph",
 };
 
@@ -103,7 +101,7 @@ export default function App() {
         setGates((prev) => [...prev.filter((g) => g.id !== event.gate.id), event.gate]);
       } else if (event.type === "gate_resolved") {
         setGates((prev) => prev.filter((g) => g.id !== event.gateId));
-      } else if (event.type === "issue_changed" || event.type === "worker_status" || event.type === "molecule_poured") {
+      } else if (event.type === "issue_changed" || event.type === "worker_status") {
         loadIssuesRef.current({ silent: true });
       }
     });
@@ -247,8 +245,6 @@ export default function App() {
             </button>
           </div>
         </div>
-
-        {view === "formulas" && <FormulasView />}
 
         {view === "graph" && <DependencyGraphView onSelectIssue={setSelectedId} />}
 

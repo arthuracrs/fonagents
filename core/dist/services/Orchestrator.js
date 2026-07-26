@@ -8,7 +8,6 @@ class Orchestrator {
     runtime;
     events;
     config;
-    currentMoleculeId;
     workerSubscriptions = new Map();
     constructor(tracker, runtime, events, config) {
         this.tracker = tracker;
@@ -30,8 +29,6 @@ class Orchestrator {
     // ── UiCommandPort: queries (delegate to tracker/runtime) ────────────────────
     listIssues(filter) { return this.tracker.listIssues(filter); }
     getIssue(id) { return this.tracker.getIssue(id); }
-    listMolecules() { return this.tracker.listMolecules(); }
-    showMolecule(id) { return this.tracker.showMolecule(id); }
     listGates() { return this.tracker.listGates({ open: true }); }
     getWorkerStatus(workerId) {
         return Promise.resolve(this.runtime.getWorker(workerId));
@@ -43,7 +40,6 @@ class Orchestrator {
     listComments(issueId) { return this.tracker.listComments(issueId); }
     listDependencies(issueId) { return this.tracker.listDependencies(issueId); }
     children(parentId) { return this.tracker.children(parentId); }
-    listFormulas() { return this.tracker.listFormulas(); }
     // ── UiCommandPort: direct issue CRUD ──────────────────────────────────────────
     createIssue(input) { return this.tracker.createIssue(input); }
     updateIssue(id, patch) { return this.tracker.updateIssue(id, patch); }
@@ -55,13 +51,6 @@ class Orchestrator {
         return this.tracker.addDependency(childId, parentId, type);
     }
     // ── ManagerToolsPort: tools the manager LLM calls via MCP ──────────────────────
-    async decompose(input) {
-        const mol = await this.tracker.pourMolecule(input.formulaName, input.vars);
-        this.currentMoleculeId = mol.id;
-        const children = await this.tracker.children(mol.rootIssueId);
-        this.emit({ type: 'molecule_poured', moleculeId: mol.id, formulaName: input.formulaName });
-        return { moleculeId: mol.id, childIssueIds: children.map((c) => c.id) };
-    }
     async dispatchWorker(input) {
         const max = this.config.maxWorkers ?? 5;
         const active = this.workerSubscriptions.size;
@@ -95,8 +84,8 @@ class Orchestrator {
         this.workerSubscriptions.set(worker.id, unsub);
         return { workerId: worker.id };
     }
-    async listReady(input) {
-        const ready = await this.tracker.readyWork({ molId: input.moleculeId });
+    async listReady() {
+        const ready = await this.tracker.readyWork();
         return ready.map((r) => ({ issueId: r.issueId, title: r.title, status: 'ready' }));
     }
     async workerStatus(input) {
@@ -110,9 +99,7 @@ class Orchestrator {
         return this.runtime.listWorkers().map((w) => ({ id: w.id, status: w.status, issueId: w.issueId }));
     }
     async escalate(input) {
-        const issueId = input.issueId ?? await this.currentMoleculeRoot();
-        if (!issueId)
-            throw new Error('Cannot escalate without an issue context — provide issueId or decompose first.');
+        const { issueId } = input;
         const gate = await this.tracker.createGate({
             issueId,
             type: 'human',
@@ -172,13 +159,6 @@ class Orchestrator {
             const worker = this.runtime.getWorker(workerId);
             this.emit({ type: 'worker_status', workerId, issueId: worker?.issueId ?? '', status: 'failed', exitCode: ev.exitCode });
         }
-    }
-    async currentMoleculeRoot() {
-        if (!this.currentMoleculeId)
-            return undefined;
-        const molecules = await this.tracker.listMolecules();
-        const mol = molecules.find((m) => m.id === this.currentMoleculeId);
-        return mol?.rootIssueId;
     }
     emit(event) { this.events.emit(event); }
 }

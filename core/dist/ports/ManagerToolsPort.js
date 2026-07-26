@@ -3,18 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MANAGER_TOOL_SCHEMAS = void 0;
 exports.MANAGER_TOOL_SCHEMAS = [
     {
-        name: 'decompose',
-        description: 'Break a request into a set of related tasks using a TaskForge template.',
-        inputSchema: {
-            type: 'object',
-            properties: {
-                formulaName: { type: 'string', description: 'Name of the TaskForge template.' },
-                vars: { type: 'object', description: 'Variable substitutions for the template.' },
-            },
-            required: ['formulaName'],
-        },
-    },
-    {
         name: 'dispatchWorker',
         description: 'Dispatch a coding agent onto a ready task. Respects a max-concurrent-workers limit (default 5, configurable via FONAGENTS_MAX_WORKERS).',
         inputSchema: {
@@ -36,16 +24,15 @@ exports.MANAGER_TOOL_SCHEMAS = [
                 status: { type: 'string', description: 'Filter by status (e.g. todo, in_progress, done).' },
                 type: { type: 'string', description: 'Filter by issue type (e.g. task, bug).' },
                 assignee: { type: 'string', description: 'Filter by assignee.' },
-                moleculeId: { type: 'string', description: 'Filter by task group id.' },
             },
         },
     },
     {
         name: 'listReady',
-        description: 'List ready tasks, optionally scoped to a task group.',
+        description: 'List ready tasks.',
         inputSchema: {
             type: 'object',
-            properties: { moleculeId: { type: 'string', description: 'Optional task group id to scope to.' } },
+            properties: {},
         },
     },
     {

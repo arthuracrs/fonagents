@@ -1,4 +1,4 @@
-import type { Gate, GateId, IssueId, MoleculeId, WorkerHandle, WorkerId, WorkerStatus } from '../domain/types.js';
+import type { Gate, GateId, IssueId, WorkerHandle, WorkerId, WorkerStatus } from '../domain/types.js';
 export interface UiEventPort {
     emit(event: UiEvent): void;
 }
@@ -21,10 +21,6 @@ export type UiEvent = {
 } | {
     type: 'gate_resolved';
     gateId: GateId;
-} | {
-    type: 'molecule_poured';
-    moleculeId: MoleculeId;
-    formulaName: string;
 } | {
     type: 'issue_changed';
     issueId: IssueId;

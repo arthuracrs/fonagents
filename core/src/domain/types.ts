@@ -4,7 +4,6 @@
 // ── Identifiers ───────────────────────────────────────────────────────────────
 
 export type IssueId = string
-export type MoleculeId = string
 export type SessionId = string
 export type WorkerId = string
 export type GateId = string
@@ -25,7 +24,6 @@ export interface Issue {
   assignee?: string
   labels: string[]
   parentId?: IssueId
-  moleculeId?: MoleculeId
   skills?: string[]
   createdAt: string
   updatedAt: string
@@ -43,26 +41,6 @@ export interface Comment {
   body: string
   author?: string
   createdAt: string
-}
-
-// ── Molecules & formulas ─────────────────────────────────────────────────────
-
-export type MoleculeType = 'swarm' | 'patrol' | 'work'
-export type MoleculeStatus = 'active' | 'complete' | 'stale'
-
-export interface Molecule {
-  id: MoleculeId
-  formulaName: string
-  rootIssueId: IssueId
-  molType: MoleculeType
-  status: MoleculeStatus
-  variables: Record<string, string>
-}
-
-export interface FormulaSummary {
-  name: string
-  description?: string
-  phase?: 'solid' | 'liquid' | 'vapor'
 }
 
 // ── Gates ─────────────────────────────────────────────────────────────────────

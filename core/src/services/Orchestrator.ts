@@ -2,13 +2,10 @@ import type {
   AgentStreamEvent,
   Comment,
   Dependency,
-  FormulaSummary,
   Gate,
   GateId,
   Issue,
   IssueId,
-  Molecule,
-  MoleculeId,
   RuntimeInfo,
   WorkerHandle,
   WorkerId,
@@ -33,7 +30,6 @@ export interface OrchestratorConfig {
 }
 
 export class Orchestrator implements UiCommandPort, ManagerToolsPort {
-  private currentMoleculeId?: MoleculeId
   private readonly workerSubscriptions = new Map<WorkerId, { unsubscribe(): void }>()
 
   constructor(
@@ -61,8 +57,6 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
 
   listIssues(filter?: IssueFilter): Promise<Issue[]> { return this.tracker.listIssues(filter) }
   getIssue(id: IssueId): Promise<Issue | undefined> { return this.tracker.getIssue(id) }
-  listMolecules(): Promise<Molecule[]> { return this.tracker.listMolecules() }
-  showMolecule(id: MoleculeId): Promise<unknown> { return this.tracker.showMolecule(id) }
   listGates(): Promise<Gate[]> { return this.tracker.listGates({ open: true }) }
   getWorkerStatus(workerId: WorkerId): Promise<WorkerHandle | undefined> {
     return Promise.resolve(this.runtime.getWorker(workerId))
@@ -74,7 +68,6 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
   listComments(issueId: IssueId): Promise<Comment[]> { return this.tracker.listComments(issueId) }
   listDependencies(issueId: IssueId): Promise<Dependency[]> { return this.tracker.listDependencies(issueId) }
   children(parentId: IssueId): Promise<Issue[]> { return this.tracker.children(parentId) }
-  listFormulas(): Promise<FormulaSummary[]> { return this.tracker.listFormulas() }
 
   // ── UiCommandPort: direct issue CRUD ──────────────────────────────────────────
 
@@ -89,17 +82,6 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
   }
 
   // ── ManagerToolsPort: tools the manager LLM calls via MCP ──────────────────────
-
-  async decompose(input: {
-    formulaName: string
-    vars: Record<string, string>
-  }): Promise<{ moleculeId: MoleculeId; childIssueIds: IssueId[] }> {
-    const mol = await this.tracker.pourMolecule(input.formulaName, input.vars)
-    this.currentMoleculeId = mol.id
-    const children = await this.tracker.children(mol.rootIssueId)
-    this.emit({ type: 'molecule_poured', moleculeId: mol.id, formulaName: input.formulaName })
-    return { moleculeId: mol.id, childIssueIds: children.map((c) => c.id) }
-  }
 
   async dispatchWorker(input: {
     issueId: IssueId
@@ -137,8 +119,8 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
     return { workerId: worker.id }
   }
 
-  async listReady(input: { moleculeId?: MoleculeId }): Promise<{ issueId: IssueId; title: string; status: string }[]> {
-    const ready = await this.tracker.readyWork({ molId: input.moleculeId })
+  async listReady(): Promise<{ issueId: IssueId; title: string; status: string }[]> {
+    const ready = await this.tracker.readyWork()
     return ready.map((r) => ({ issueId: r.issueId, title: r.title, status: 'ready' }))
   }
 
@@ -157,9 +139,8 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
     return this.runtime.listWorkers().map((w) => ({ id: w.id, status: w.status, issueId: w.issueId }))
   }
 
-  async escalate(input: { reason: string; issueId?: IssueId }): Promise<{ gateId: string }> {
-    const issueId = input.issueId ?? await this.currentMoleculeRoot()
-    if (!issueId) throw new Error('Cannot escalate without an issue context — provide issueId or decompose first.')
+  async escalate(input: { reason: string; issueId: IssueId }): Promise<{ gateId: string }> {
+    const { issueId } = input
     const gate = await this.tracker.createGate({
       issueId,
       type: 'human',
@@ -224,13 +205,6 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
       const worker = this.runtime.getWorker(workerId)
       this.emit({ type: 'worker_status', workerId, issueId: worker?.issueId ?? '', status: 'failed', exitCode: ev.exitCode })
     }
-  }
-
-  private async currentMoleculeRoot(): Promise<IssueId | undefined> {
-    if (!this.currentMoleculeId) return undefined
-    const molecules = await this.tracker.listMolecules()
-    const mol = molecules.find((m) => m.id === this.currentMoleculeId)
-    return mol?.rootIssueId
   }
 
   private emit(event: UiEvent): void { this.events.emit(event) }

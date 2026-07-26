@@ -5,8 +5,6 @@ import type {
   GateId,
   Issue,
   IssueId,
-  Molecule,
-  MoleculeId,
   RuntimeInfo,
   WorkerHandle,
   WorkerId,
@@ -23,8 +21,6 @@ export interface UiCommandPort {
   // ── Queries ──────────────────────────────────────────────────────────────────
   listIssues(filter?: IssueFilter): Promise<Issue[]>
   getIssue(id: IssueId): Promise<Issue | undefined>
-  listMolecules(): Promise<Molecule[]>
-  showMolecule(id: MoleculeId): Promise<unknown>
   listGates(): Promise<Gate[]>
   getWorkerStatus(workerId: WorkerId): Promise<WorkerHandle | undefined>
   listWorkers(): Promise<WorkerHandle[]>
@@ -32,7 +28,6 @@ export interface UiCommandPort {
   listComments(issueId: IssueId): Promise<Comment[]>
   listDependencies(issueId: IssueId): Promise<Dependency[]>
   children(parentId: IssueId): Promise<Issue[]>
-  listFormulas(): Promise<import('../domain/types.js').FormulaSummary[]>
 
   // ── Direct issue CRUD (the human manages tasks too, not just the manager) ────
   createIssue(input: IssueCreateInput): Promise<Issue>

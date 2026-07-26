@@ -76,15 +76,6 @@ export interface AgentExecution {
   runtimeId?: string;
 }
 
-export interface Formula {
-  name: string;
-  description?: string;
-  type?: string;
-  source?: string;
-  variables?: Record<string, unknown>;
-  steps?: unknown[];
-}
-
 export interface AgentTrigger {
   id: string;
   issueId: string;
@@ -133,6 +124,5 @@ export type UiEvent =
   | { type: "worker_status"; workerId: string; status: string; exitCode?: number }
   | { type: "gate_opened"; gate: Gate }
   | { type: "gate_resolved"; gateId: string }
-  | { type: "molecule_poured"; moleculeId: string; formulaName: string }
   | { type: "issue_changed"; issueId: string; change: string }
   | { type: "error"; message: string };
