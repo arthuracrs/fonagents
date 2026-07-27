@@ -10,7 +10,7 @@ function buildOverseerPrompt(completedIssues, failedIssues) {
         parts.push(`Workers for these issues failed: ${failedIssues.join(', ')}`);
     }
     parts.push('');
-    parts.push('Review the board state and dispatch ready tasks.');
+    parts.push('Review the board state and dispatch ready tasks immediately.');
     return parts.join('\n');
 }
 //# sourceMappingURL=overseer-user.js.map

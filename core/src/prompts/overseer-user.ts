@@ -9,7 +9,7 @@ export function buildOverseerPrompt(completedIssues: string[], failedIssues: str
   }
 
   parts.push('')
-  parts.push('Review the board state and dispatch ready tasks.')
+  parts.push('Review the board state and dispatch ready tasks immediately.')
 
   return parts.join('\n')
 }
