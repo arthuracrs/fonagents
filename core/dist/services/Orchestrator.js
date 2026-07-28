@@ -70,7 +70,6 @@ class Orchestrator {
         const issue = await this.tracker.getIssue(input.issueId);
         if (!issue)
             throw new Error(`Cannot dispatch: issue ${input.issueId} not found`);
-        await this.tracker.claimIssue(input.issueId, 'manager');
         const spawnInput = {
             issueId: input.issueId,
             runtimeId: input.runtimeId ?? DEFAULT_WORKER_RUNTIME,
@@ -80,6 +79,7 @@ class Orchestrator {
             cwd: this.config.projectDir,
         };
         const worker = await this.runtime.spawnWorker(spawnInput);
+        await this.tracker.updateIssue(input.issueId, { status: 'in_progress', assignee: worker.id });
         this.emit({ type: 'worker_started', worker });
         const unsub = this.runtime.subscribeWorker(worker.id, (ev) => {
             this.forwardWorkerEvent(worker.id, ev);
