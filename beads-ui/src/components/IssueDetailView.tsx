@@ -4,6 +4,7 @@ import type { Status, IssueType, Comment, Gate } from "../types";
 import { IssueModel } from "../models/IssueModel";
 import { StatusBadge, TypeBadge, PriorityBadge } from "./Badge";
 import { TimeFormatter } from "../lib/TimeFormatter";
+import { Markdown } from "./Markdown";
 
 interface Props {
   issue: IssueModel;
@@ -184,7 +185,7 @@ export function IssueDetailView({ issue: initialIssue, gates: propGates, onUpdat
       {issue.description && (
         <section className="mb-4">
           <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Description</h3>
-          <p className="whitespace-pre-wrap text-sm text-[var(--text)]">{issue.description}</p>
+          <Markdown content={issue.description} />
         </section>
       )}
 
@@ -308,7 +309,7 @@ export function IssueDetailView({ issue: initialIssue, gates: propGates, onUpdat
                   {c.author && <span>@{c.author}</span>}
                   <span>{c.createdAt ? TimeFormatter.fmt(c.createdAt) : ""}</span>
                 </div>
-                <p className="whitespace-pre-wrap text-sm text-[var(--text)]">{c.body}</p>
+                <Markdown content={c.body} />
               </div>
             ))}
           </div>

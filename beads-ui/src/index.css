@@ -40,4 +40,90 @@
     background: var(--border);
     border-radius: 3px;
   }
+
+  .markdown-content p {
+    margin: 0.5em 0;
+  }
+  .markdown-content p:first-child {
+    margin-top: 0;
+  }
+  .markdown-content p:last-child {
+    margin-bottom: 0;
+  }
+  .markdown-content ul,
+  .markdown-content ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+  }
+  .markdown-content li {
+    margin: 0.25em 0;
+  }
+  .markdown-content h1,
+  .markdown-content h2,
+  .markdown-content h3,
+  .markdown-content h4 {
+    margin: 1em 0 0.5em;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  .markdown-content h1 { font-size: 1.25em; }
+  .markdown-content h2 { font-size: 1.15em; }
+  .markdown-content h3 { font-size: 1.05em; }
+  .markdown-content pre {
+    margin: 0.5em 0;
+    padding: 0.75em;
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    font-size: 0.85em;
+  }
+  .markdown-content code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.85em;
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    background: var(--surface);
+  }
+  .markdown-content pre code {
+    padding: 0;
+    background: none;
+    border: none;
+  }
+  .markdown-content a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .markdown-content a:hover {
+    opacity: 0.8;
+  }
+  .markdown-content blockquote {
+    margin: 0.5em 0;
+    padding-left: 0.75em;
+    border-left: 3px solid var(--border);
+    color: var(--text-muted);
+  }
+  .markdown-content hr {
+    margin: 1em 0;
+    border: none;
+    border-top: 1px solid var(--border);
+  }
+  .markdown-content table {
+    border-collapse: collapse;
+    margin: 0.5em 0;
+    font-size: 0.9em;
+  }
+  .markdown-content th,
+  .markdown-content td {
+    padding: 0.4em 0.6em;
+    border: 1px solid var(--border);
+  }
+  .markdown-content th {
+    background: var(--surface2);
+    font-weight: 600;
+  }
+  .markdown-content img {
+    max-width: 100%;
+    border-radius: 6px;
+  }
 }

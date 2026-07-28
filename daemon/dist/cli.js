@@ -199,7 +199,7 @@ If you need human input:
 1. Use fonagents_escalate with your specific question
 2. Stop working. The task is now blocked on human response.
 
-Write comments in plain text only \u2014 no Markdown syntax. Use line breaks and indentation for readability.`;
+Write clearly. You can use Markdown syntax \u2014 headings, lists, bold, code blocks, etc. \u2014 for readable comments and descriptions.`;
   }
 });
 

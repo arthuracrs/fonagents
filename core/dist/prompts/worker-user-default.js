@@ -13,5 +13,5 @@ If you need human input:
 1. Use fonagents_escalate with your specific question
 2. Stop working. The task is now blocked on human response.
 
-Write comments in plain text only — no Markdown syntax. Use line breaks and indentation for readability.`;
+Write clearly. You can use Markdown syntax — headings, lists, bold, code blocks, etc. — for readable comments and descriptions.`;
 //# sourceMappingURL=worker-user-default.js.map

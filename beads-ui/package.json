@@ -22,6 +22,7 @@
   "type": "commonjs",
   "dependencies": {
     "@fonagents/core": "^0.0.0",
+    "marked": "^18.0.7",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
