@@ -39,3 +39,7 @@ beads-ui/.beads/*.db
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+
+.opencode/
+.taskforge/
