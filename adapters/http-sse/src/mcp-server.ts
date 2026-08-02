@@ -63,10 +63,14 @@ async function handleRequest(req: JsonRpcRequest): Promise<unknown> {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(args),
       })
-      const result = await resp.json()
+      const text = await resp.text()
       if (!resp.ok) {
-        throw new Error((result as { error?: string }).error ?? `HTTP ${resp.status}`)
+        throw new Error((safeParse(text) as { error?: string })?.error ?? `HTTP ${resp.status}`)
       }
+      // Some tools legitimately return empty bodies (e.g. void results). Never
+      // surface that as a JSON-RPC error — the agent would retry the tool call
+      // and create duplicate side effects (e.g. duplicate progress comments).
+      const result = text ? safeParse(text) : {}
       // MCP tool results are returned as content blocks
       return {
         content: [{ type: 'text', text: JSON.stringify(result) }],
@@ -78,6 +82,14 @@ async function handleRequest(req: JsonRpcRequest): Promise<unknown> {
 
     default:
       throw new Error(`Unknown method: ${req.method}`)
+  }
+}
+
+function safeParse(text: string): unknown {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { error: `Invalid JSON from daemon: ${text.slice(0, 120)}` }
   }
 }
 

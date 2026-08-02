@@ -119,11 +119,12 @@ class Orchestrator {
         return { gateId: gate.id };
     }
     async recordProgress(input) {
-        await this.tracker.addComment(input.issueId, input.body, 'fonagents-manager');
+        const comment = await this.tracker.addComment(input.issueId, input.body, 'fonagents-manager');
         this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'commented' });
+        return comment;
     }
     async completeTask(input) {
-        await this.tracker.closeIssue(input.taskId, input.reason);
+        const issue = await this.tracker.closeIssue(input.taskId, input.reason);
         this.emit({ type: 'issue_changed', issueId: input.taskId, change: 'closed' });
         const workers = this.runtime.listWorkers();
         for (const w of workers) {
@@ -131,6 +132,7 @@ class Orchestrator {
                 await this.cancelWorker(w.id);
             }
         }
+        return { ok: true, issueId: issue.id, status: issue.status };
     }
     async resetStaleTasks() {
         const inProgress = await this.tracker.listIssues({ status: 'in_progress' });

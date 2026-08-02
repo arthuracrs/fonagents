@@ -76,11 +76,15 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
     recordProgress(input: {
         issueId: IssueId;
         body: string;
-    }): Promise<void>;
+    }): Promise<Comment>;
     completeTask(input: {
         taskId: IssueId;
         reason?: string;
-    }): Promise<void>;
+    }): Promise<{
+        ok: true;
+        issueId: IssueId;
+        status: string;
+    }>;
     resetStaleTasks(): Promise<{
         resetIssueIds: IssueId[];
     }>;

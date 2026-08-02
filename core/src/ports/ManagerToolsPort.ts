@@ -1,4 +1,4 @@
-import type { Issue, IssueId, RuntimeId, WorkerId } from '../domain/types.js'
+import type { Comment, Issue, IssueId, RuntimeId, WorkerId } from '../domain/types.js'
 import type { IssueFilter } from './IssueTrackerPort.js'
 
 // Tools core exposes to the manager LLM via MCP.
@@ -46,10 +46,11 @@ export interface ManagerToolsPort {
 
   // Record progress on a task (audit trail). Distinct from UiCommandPort.addComment
   // to avoid signature collision on the Orchestrator.
-  recordProgress(input: { issueId: IssueId; body: string }): Promise<void>
+  // Returns the created comment so MCP clients get a usable JSON result.
+  recordProgress(input: { issueId: IssueId; body: string }): Promise<Comment>
 
   // Mark a task as complete. Distinct from UiCommandPort.closeIssue.
-  completeTask(input: { taskId: IssueId; reason?: string }): Promise<void>
+  completeTask(input: { taskId: IssueId; reason?: string }): Promise<{ ok: true; issueId: IssueId; status: string }>
 
   // Reset in_progress tasks that have no active workers back to open.
   // Recovers from stale state after machine reboots or crashed workers.

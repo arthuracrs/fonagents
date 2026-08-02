@@ -388,6 +388,29 @@ describe('Integration: TaskForgeAdapter + HttpSseAdapter', () => {
       expect(res.body).toHaveProperty('enabled')
     })
 
+    it('POST /api/mcp/tools/recordProgress should add a comment and return it', async () => {
+      const issue = await adapter.createIssue({ title: 'Progress' })
+      const res = await request(app)
+        .post('/api/mcp/tools/recordProgress')
+        .send({ issueId: issue.id, body: 'Working on it' })
+      expect(res.status).toBe(200)
+      expect(res.body).toHaveProperty('id')
+      expect(res.body).toHaveProperty('body', 'Working on it')
+      const comments = await adapter.listComments(issue.id)
+      expect(comments).toHaveLength(1)
+    })
+
+    it('POST /api/mcp/tools/completeTask should close the task and return a result', async () => {
+      const issue = await adapter.createIssue({ title: 'Finish me' })
+      const res = await request(app)
+        .post('/api/mcp/tools/completeTask')
+        .send({ taskId: issue.id, reason: 'Done' })
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ ok: true, issueId: issue.id, status: 'closed' })
+      const closed = await adapter.getIssue(issue.id)
+      expect(closed?.status).toBe('closed')
+    })
+
     it('POST /api/mcp/tools/unknown should return 500', async () => {
       const res = await request(app)
         .post('/api/mcp/tools/unknown')

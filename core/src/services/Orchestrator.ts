@@ -169,13 +169,14 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
     return { gateId: gate.id }
   }
 
-  async recordProgress(input: { issueId: IssueId; body: string }): Promise<void> {
-    await this.tracker.addComment(input.issueId, input.body, 'fonagents-manager')
+  async recordProgress(input: { issueId: IssueId; body: string }): Promise<Comment> {
+    const comment = await this.tracker.addComment(input.issueId, input.body, 'fonagents-manager')
     this.emit({ type: 'issue_changed', issueId: input.issueId, change: 'commented' })
+    return comment
   }
 
-  async completeTask(input: { taskId: IssueId; reason?: string }): Promise<void> {
-    await this.tracker.closeIssue(input.taskId, input.reason)
+  async completeTask(input: { taskId: IssueId; reason?: string }): Promise<{ ok: true; issueId: IssueId; status: string }> {
+    const issue = await this.tracker.closeIssue(input.taskId, input.reason)
     this.emit({ type: 'issue_changed', issueId: input.taskId, change: 'closed' })
     const workers = this.runtime.listWorkers()
     for (const w of workers) {
@@ -183,6 +184,7 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
         await this.cancelWorker(w.id)
       }
     }
+    return { ok: true, issueId: issue.id, status: issue.status }
   }
 
   async resetStaleTasks(): Promise<{ resetIssueIds: IssueId[] }> {

@@ -596,11 +596,12 @@ var require_Orchestrator = __commonJS({
         return { gateId: gate.id };
       }
       async recordProgress(input) {
-        await this.tracker.addComment(input.issueId, input.body, "fonagents-manager");
+        const comment = await this.tracker.addComment(input.issueId, input.body, "fonagents-manager");
         this.emit({ type: "issue_changed", issueId: input.issueId, change: "commented" });
+        return comment;
       }
       async completeTask(input) {
-        await this.tracker.closeIssue(input.taskId, input.reason);
+        const issue = await this.tracker.closeIssue(input.taskId, input.reason);
         this.emit({ type: "issue_changed", issueId: input.taskId, change: "closed" });
         const workers = this.runtime.listWorkers();
         for (const w of workers) {
@@ -608,6 +609,7 @@ var require_Orchestrator = __commonJS({
             await this.cancelWorker(w.id);
           }
         }
+        return { ok: true, issueId: issue.id, status: issue.status };
       }
       async resetStaleTasks() {
         const inProgress = await this.tracker.listIssues({ status: "in_progress" });
@@ -728,10 +730,11 @@ async function handleRequest(req) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(args)
       });
-      const result = await resp.json();
+      const text = await resp.text();
       if (!resp.ok) {
-        throw new Error(result.error ?? `HTTP ${resp.status}`);
+        throw new Error(safeParse(text)?.error ?? `HTTP ${resp.status}`);
       }
+      const result = text ? safeParse(text) : {};
       return {
         content: [{ type: "text", text: JSON.stringify(result) }]
       };
@@ -740,6 +743,13 @@ async function handleRequest(req) {
       return {};
     default:
       throw new Error(`Unknown method: ${req.method}`);
+  }
+}
+function safeParse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: `Invalid JSON from daemon: ${text.slice(0, 120)}` };
   }
 }
 var pendingCount = 0;
