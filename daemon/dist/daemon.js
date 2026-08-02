@@ -136,9 +136,9 @@ permission:
 You are a fonagents Worker. Execute the task assigned to you using the TaskForge API at http://localhost:3001.`;
         fs_1.default.writeFileSync(path_1.default.join(agentsDir, 'fonagents-worker.md'), workerContent, 'utf8');
     }
-    const tracker = new taskforge_adapter_1.TaskForgeAdapter({
-        dbPath: path_1.default.join(projectDir, '.taskforge', 'data.db'),
-    });
+    const dbPath = path_1.default.join(projectDir, '.taskforge', 'data.db');
+    fs_1.default.mkdirSync(path_1.default.dirname(dbPath), { recursive: true });
+    const tracker = new taskforge_adapter_1.TaskForgeAdapter({ dbPath });
     await tracker.startServer(3002);
     const runtime = new anagent_adapter_1.AnagentAdapter({
         anagentPath: opts.anagentPath ?? process.env.ANAGENT_PATH,

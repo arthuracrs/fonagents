@@ -154,9 +154,10 @@ You are a fonagents Worker. Execute the task assigned to you using the TaskForge
     fs.writeFileSync(path.join(agentsDir, 'fonagents-worker.md'), workerContent, 'utf8')
   }
 
-  const tracker = new TaskForgeAdapter({
-    dbPath: path.join(projectDir, '.taskforge', 'data.db'),
-  })
+  const dbPath = path.join(projectDir, '.taskforge', 'data.db')
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true })
+
+  const tracker = new TaskForgeAdapter({ dbPath })
 
   await tracker.startServer(3002)
 
