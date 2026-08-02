@@ -190,10 +190,10 @@ var require_worker_user_default = __commonJS({
     exports2.DEFAULT_PROMPT = `Work on task {id}.
 
 Steps:
-1. Read the task: use fonagents_getIssue with id {id}
-2. Claim the task: use fonagents_updateIssue with status in_progress
+1. Read the task: use fonagents_listTasks to find the task with id {id} and read its description
+2. Do the work: implement the task in the project
 3. When done: use fonagents_recordProgress with a summary of what was done
-4. Close the task: use fonagents_completeIssue with a brief reason
+4. Close the task: use fonagents_completeTask with taskId {id} and a brief reason
 
 If you need human input:
 1. Use fonagents_escalate with your specific question
@@ -474,6 +474,7 @@ var require_Orchestrator = __commonJS({
       // ── UiCommandPort: worker control ──────────────────────────────────────────────
       async cancelWorker(workerId) {
         await this.runtime.cancelWorker(workerId);
+        this.releaseWorkerSlot(workerId);
       }
       // ── UiCommandPort: queries (delegate to tracker/runtime) ────────────────────
       listIssues(filter) {
@@ -561,14 +562,13 @@ var require_Orchestrator = __commonJS({
         const unsub = this.runtime.subscribeWorker(worker.id, (ev) => {
           this.forwardWorkerEvent(worker.id, ev);
           if (ev.type === "done" || ev.type === "failed") {
-            const cleanup = this.workerSubscriptions.get(worker.id);
-            if (cleanup) {
-              cleanup.unsubscribe();
-              this.workerSubscriptions.delete(worker.id);
-            }
+            this.releaseWorkerSlot(worker.id);
           }
         });
         this.workerSubscriptions.set(worker.id, unsub);
+        if (worker.status === "failed" || worker.status === "cancelled" || worker.status === "completed") {
+          this.releaseWorkerSlot(worker.id);
+        }
         return { workerId: worker.id };
       }
       async listReady() {
@@ -605,7 +605,7 @@ var require_Orchestrator = __commonJS({
         const workers = this.runtime.listWorkers();
         for (const w of workers) {
           if (w.issueId === input.taskId && w.status === "running") {
-            await this.runtime.cancelWorker(w.id);
+            await this.cancelWorker(w.id);
           }
         }
       }
@@ -635,6 +635,13 @@ var require_Orchestrator = __commonJS({
         this.config.overseer = config;
       }
       // ── Helpers ────────────────────────────────────────────────────────────────────
+      releaseWorkerSlot(workerId) {
+        const cleanup = this.workerSubscriptions.get(workerId);
+        if (cleanup) {
+          cleanup.unsubscribe();
+          this.workerSubscriptions.delete(workerId);
+        }
+      }
       forwardWorkerEvent(workerId, ev) {
         if (ev.type === "text")
           this.emit({ type: "worker_output", workerId, delta: ev.delta });

@@ -94,6 +94,7 @@ export declare class Orchestrator implements UiCommandPort, ManagerToolsPort {
         enabled: boolean;
         mode: string;
     }): void;
+    private releaseWorkerSlot;
     private forwardWorkerEvent;
     private emit;
 }

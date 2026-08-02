@@ -25,6 +25,7 @@ class Orchestrator {
     // ── UiCommandPort: worker control ──────────────────────────────────────────────
     async cancelWorker(workerId) {
         await this.runtime.cancelWorker(workerId);
+        this.releaseWorkerSlot(workerId);
     }
     // ── UiCommandPort: queries (delegate to tracker/runtime) ────────────────────
     listIssues(filter) { return this.tracker.listIssues(filter); }
@@ -84,14 +85,13 @@ class Orchestrator {
         const unsub = this.runtime.subscribeWorker(worker.id, (ev) => {
             this.forwardWorkerEvent(worker.id, ev);
             if (ev.type === 'done' || ev.type === 'failed') {
-                const cleanup = this.workerSubscriptions.get(worker.id);
-                if (cleanup) {
-                    cleanup.unsubscribe();
-                    this.workerSubscriptions.delete(worker.id);
-                }
+                this.releaseWorkerSlot(worker.id);
             }
         });
         this.workerSubscriptions.set(worker.id, unsub);
+        if (worker.status === 'failed' || worker.status === 'cancelled' || worker.status === 'completed') {
+            this.releaseWorkerSlot(worker.id);
+        }
         return { workerId: worker.id };
     }
     async listReady() {
@@ -128,7 +128,7 @@ class Orchestrator {
         const workers = this.runtime.listWorkers();
         for (const w of workers) {
             if (w.issueId === input.taskId && w.status === 'running') {
-                await this.runtime.cancelWorker(w.id);
+                await this.cancelWorker(w.id);
             }
         }
     }
@@ -158,6 +158,13 @@ class Orchestrator {
         this.config.overseer = config;
     }
     // ── Helpers ────────────────────────────────────────────────────────────────────
+    releaseWorkerSlot(workerId) {
+        const cleanup = this.workerSubscriptions.get(workerId);
+        if (cleanup) {
+            cleanup.unsubscribe();
+            this.workerSubscriptions.delete(workerId);
+        }
+    }
     forwardWorkerEvent(workerId, ev) {
         if (ev.type === 'text')
             this.emit({ type: 'worker_output', workerId, delta: ev.delta });

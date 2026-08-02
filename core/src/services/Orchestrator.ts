@@ -51,6 +51,7 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
 
   async cancelWorker(workerId: WorkerId): Promise<void> {
     await this.runtime.cancelWorker(workerId)
+    this.releaseWorkerSlot(workerId)
   }
 
   // ── UiCommandPort: queries (delegate to tracker/runtime) ────────────────────
@@ -127,11 +128,13 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
     const unsub = this.runtime.subscribeWorker(worker.id, (ev) => {
       this.forwardWorkerEvent(worker.id, ev)
       if (ev.type === 'done' || ev.type === 'failed') {
-        const cleanup = this.workerSubscriptions.get(worker.id)
-        if (cleanup) { cleanup.unsubscribe(); this.workerSubscriptions.delete(worker.id) }
+        this.releaseWorkerSlot(worker.id)
       }
     })
     this.workerSubscriptions.set(worker.id, unsub)
+    if (worker.status === 'failed' || worker.status === 'cancelled' || worker.status === 'completed') {
+      this.releaseWorkerSlot(worker.id)
+    }
     return { workerId: worker.id }
   }
 
@@ -177,7 +180,7 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
     const workers = this.runtime.listWorkers()
     for (const w of workers) {
       if (w.issueId === input.taskId && w.status === 'running') {
-        await this.runtime.cancelWorker(w.id)
+        await this.cancelWorker(w.id)
       }
     }
   }
@@ -211,6 +214,14 @@ export class Orchestrator implements UiCommandPort, ManagerToolsPort {
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────────
+
+  private releaseWorkerSlot(workerId: WorkerId): void {
+    const cleanup = this.workerSubscriptions.get(workerId)
+    if (cleanup) {
+      cleanup.unsubscribe()
+      this.workerSubscriptions.delete(workerId)
+    }
+  }
 
   private forwardWorkerEvent(workerId: WorkerId, ev: AgentStreamEvent): void {
     if (ev.type === 'text') this.emit({ type: 'worker_output', workerId, delta: ev.delta })
